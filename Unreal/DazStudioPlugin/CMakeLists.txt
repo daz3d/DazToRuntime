@@ -19,8 +19,18 @@ elseif(APPLE)
 	set(OS_SOURCES "")
 endif()
 
+set(DPC_IMAGES_CPP "${CMAKE_CURRENT_BINARY_DIR}/DzUnrealIcon.cpp" )
+set(DPC_SRC_IMAGES 
+	icon.png
+)
+
+add_custom_command(OUTPUT ${DPC_IMAGES_CPP}
+	COMMAND ${DAZ_SDK_DPC_EXE} -mode image -o ${DPC_IMAGES_CPP} ${DPC_SRC_IMAGES}		
+	DEPENDS ${DPC_SRC_IMAGES}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+)
+
 add_library( ${DZ_PLUGIN_TGT_NAME} SHARED	
-	DzUnrealIcon.cpp
 	DzUnrealAction.cpp
 	DzUnrealAction.h
 	DzUnrealDialog.cpp
@@ -31,6 +41,7 @@ add_library( ${DZ_PLUGIN_TGT_NAME} SHARED
 	DzUnrealSubdivisionDialog.cpp
 	DzUnrealSubdivisionDialog.h
 	version.h
+	${DPC_IMAGES_CPP}
 	${OS_SOURCES}
 )
 
@@ -51,3 +62,5 @@ set_target_properties (${DZ_PLUGIN_TGT_NAME}
 	FOLDER ""
 	PROJECT_LABEL ${DZ_PLUGIN_PROJECT_NAME}
 )
+
+set_property(SOURCE ${DPC_IMAGES_CPP} PROPERTY SKIP_AUTOMOC ON)
