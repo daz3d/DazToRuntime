@@ -1,0 +1,14 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+	<qresource prefix="/Images">
+		<file alias="icon">Images/Icon.png</file>
+	</qresource>
+	<qresource prefix="/Editor">
+		<file alias="0">../../UnityPlugin/Editor/Daz3DBridge.cs</file>
+		<file alias="1">../../UnityPlugin/Editor/Daz3DDTUImporter.cs</file>
+		<file alias="2">../../UnityPlugin/Editor/DazJsonHelper.cs</file>
+	</qresource>
+	<qresource prefix="/Shaders">
+		<file alias="0">../../UnityPlugin/Shaders/DazNoDraw.shader</file>
+	</qresource>
+</RCC>

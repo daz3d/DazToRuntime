@@ -149,7 +149,7 @@ set(QT_QTCORE_INCLUDE_DIR "${DAZ_SDK_DIR}/include/QtCore")
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/DUMMY_MKSPECS/default" )
 set(QT_MKSPECS_DIR "${CMAKE_CURRENT_BINARY_DIR}/DUMMY_MKSPECS")
 
-find_package(Qt4 4.8.7 REQUIRED QtCore QtGui QtScript QtOpenGL QtNetwork QtSql QtXml)
+find_package(Qt4 4.8.1 REQUIRED QtCore QtGui QtScript QtOpenGL QtNetwork QtSql QtXml)
 
 set(DZSDK_QT_CORE_TARGET Qt4::QtCore)
 set(DZSDK_QT_GUI_TARGET Qt4::QtGui)
@@ -162,5 +162,5 @@ set(DZSDK_QT_XML_TARGET	Qt4::QtXml)
 list(APPEND CMAKE_AUTOMOC_MOC_OPTIONS -i)
 
 add_subdirectory("Common")
-#add_subdirectory("Unity")
+add_subdirectory("Unity")
 add_subdirectory("Unreal")

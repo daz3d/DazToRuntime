@@ -76,6 +76,7 @@ void DzUnrealAction::executeAction()
 		  ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
 		  SubdivisionDialog = DzUnrealSubdivisionDialog::Get(dlg);
 		  SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
+		  FBXVersion = dlg->fbxVersionCombo->currentText();
 
 		  Export();
 	 }
