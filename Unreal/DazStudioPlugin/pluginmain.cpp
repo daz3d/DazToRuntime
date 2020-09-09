@@ -15,4 +15,4 @@ DZ_PLUGIN_DESCRIPTION(QString(
 	"<a href=\"%1/aDazToUnreal/index.htm\">Documentation</a><br><br>"
 ).arg(dzApp->getDocumentationPath()));
 
-DZ_PLUGIN_CLASS_GUID(DzUnrealAction, 569D1102-15DE-44EA-8C8B-A1506297DEC3);
+DZ_PLUGIN_CLASS_GUID(DzUnrealAction, 99F42CAE-CD02-49BC-A7CE-C0CF4EDD7609);
