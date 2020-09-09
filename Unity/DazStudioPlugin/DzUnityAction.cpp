@@ -291,7 +291,7 @@ void DzUnityAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 
 								Writer.startObject(true);
 								Writer.addMember("Name", Name);
-								Writer.addMember("Value", NumericProperty->getDoubleValue());
+								Writer.addMember("Value", QString::number(NumericProperty->getDoubleValue()));
 								Writer.addMember("Data Type", QString("Double"));
 								Writer.addMember("Texture", TextureName);
 								Writer.finishObject();

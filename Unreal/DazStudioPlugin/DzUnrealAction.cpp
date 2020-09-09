@@ -235,7 +235,7 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 								Writer.addMember("Material Name", Material->getName());
 								Writer.addMember("Material Type", Material->getMaterialName());
 								Writer.addMember("Name", Name);
-								Writer.addMember("Value", NumericProperty->getDoubleValue());
+								Writer.addMember("Value", QString::number(NumericProperty->getDoubleValue()));
 								Writer.addMember("Data Type", QString("Double"));
 								Writer.addMember("Texture", TextureName);
 								Writer.finishObject();
