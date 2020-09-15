@@ -2,6 +2,7 @@
 #include <QtGui/QLabel>
 #include <QtGui/QGroupBox>
 #include <QtGui/QPushButton>
+#include <QtGui/QMessageBox>
 #include <QtGui/QToolTip>
 #include <QtGui/QWhatsThis>
 #include <QtGui/qlineedit.h>
@@ -185,8 +186,35 @@ void DzUnityDialog::HandleSelectAssetsFolderButton()
 
 	 if (directoryName != NULL)
 	 {
-		  assetsFolderEdit->setText(directoryName);
-		  settings->setValue("AssetsPath", directoryName);
+		  QDir parentDir = QFileInfo(directoryName).dir();
+		  if (!parentDir.exists())
+		  {
+				QMessageBox::warning(0, tr("Error"), tr("Please select Unity Root Assets Folder."), QMessageBox::Ok);
+				return;
+		  }
+		  else
+		  {
+				bool found1 = false;
+				bool found2 = false;
+				QFileInfoList list = parentDir.entryInfoList(QDir::NoDot | QDir::NoDotDot | QDir::Dirs);
+				for (int i = 0; i < list.size(); i++)
+				{
+					 QFileInfo file = list[i];
+					 if (file.baseName() == QString("ProjectSettings"))
+						  found1 = true;
+					 if (file.baseName() == QString("Library"))
+						  found2 = true;
+				}
+
+				if (!found1 || !found2)
+				{
+					 QMessageBox::warning(0, tr("Error"), tr("Please select Unity Root Assets Folder."), QMessageBox::Ok);
+					 return;
+				}
+
+				assetsFolderEdit->setText(directoryName);
+				settings->setValue("AssetsPath", directoryName);
+		  }
 	 }
 }
 
