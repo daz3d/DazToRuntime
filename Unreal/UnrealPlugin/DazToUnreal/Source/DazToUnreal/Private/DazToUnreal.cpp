@@ -383,7 +383,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
 				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
 				FString TexturePath = material->GetStringField(TEXT("Texture"));
-				FString TextureName = FPaths::GetBaseFilename(TexturePath).Replace(TEXT(" "), TEXT("_")).Replace(TEXT("&"), TEXT("_"));
+				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
 
 				if (!MaterialProperties.Contains(MaterialName))
 				{
@@ -441,7 +441,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
 				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
 				FString TexturePath = material->GetStringField(TEXT("Texture"));
-				FString TextureName = FPaths::GetBaseFilename(TexturePath).Replace(TEXT(" "), TEXT("_")).Replace(TEXT("&"), TEXT("_")).Replace(TEXT("("), TEXT("_")).Replace(TEXT(")"), TEXT("_"));
+				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
 
 				if (!MaterialProperties.Contains(MaterialName))
 				{
