@@ -4,11 +4,11 @@
 		<file alias="icon">Images/Icon.png</file>
 	</qresource>
 	<qresource prefix="/Editor">
-		<file alias="0">../../UnityPlugin/Editor/Daz3DBridge.cs</file>
-		<file alias="1">../../UnityPlugin/Editor/Daz3DDTUImporter.cs</file>
-		<file alias="2">../../UnityPlugin/Editor/DazJsonHelper.cs</file>
+		<file alias="Daz3DBridge.cs">../../UnityPlugin/Editor/Daz3DBridge.cs</file>
+		<file alias="Daz3DDTUImporter.cs">../../UnityPlugin/Editor/Daz3DDTUImporter.cs</file>
+		<file alias="DazJsonHelper.cs">../../UnityPlugin/Editor/DazJsonHelper.cs</file>
 	</qresource>
 	<qresource prefix="/Shaders">
-		<file alias="0">../../UnityPlugin/Shaders/DazNoDraw.shader</file>
+		<file alias="DazNoDraw.shader">../../UnityPlugin/Shaders/DazNoDraw.shader</file>
 	</qresource>
 </RCC>

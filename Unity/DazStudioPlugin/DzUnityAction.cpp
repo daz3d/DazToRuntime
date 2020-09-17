@@ -98,18 +98,14 @@ void DzUnityAction::CreateEditorScripts()
 	 QString editorFolder = ImportFolder + "\\Editor";
 	 dir.mkpath(editorFolder);
 
-	 QStringList scripts;
-	 scripts.append(editorFolder + "\\Daz3DBridge.cs");
-	 scripts.append(editorFolder + "\\Daz3DDTUImporter.cs");
-	 scripts.append(editorFolder + "\\DazJsonHelper.cs");
-
-	 for (int i = 0; i < scripts.size(); i++)
+	 QStringList editorScripts = QDir(":/Editor/").entryList();
+	 for (int i = 0; i < editorScripts.size(); i++)
 	 {
-		  QString script = scripts[i];
+		  QString script = editorFolder + "\\" + editorScripts[i];
 		  QFileInfo check(script);
 		  if (!check.exists() || !check.isFile())
 		  {
-				QFile file(":/Editor/" + QString::number(i));
+				QFile file(":/Editor/" + editorScripts[i]);
 				file.copy(script);
 				file.close();
 		  }
@@ -118,26 +114,23 @@ void DzUnityAction::CreateEditorScripts()
 
 void DzUnityAction::CreateShaders()
 {
-	 //Create editor folder if it doesn't exist
+	 //Create shader folder if it doesn't exist
 	 QDir dir;
 	 QString shaderFolder = ImportFolder + "\\Shaders";
 	 dir.mkpath(shaderFolder);
 
-	 QStringList shaders;
-	 shaders.append(shaderFolder + "\\DazNoDraw.shader");
-
+	 QStringList shaders = QDir(":/Shaders/").entryList();
 	 for (int i = 0; i < shaders.size(); i++)
 	 {
-		  QString shader = shaders[i];
+		  QString shader = shaderFolder + "\\" + shaders[i];
 		  QFileInfo check(shader);
 		  if (!check.exists() || !check.isFile())
 		  {
-				QFile file(":/Shaders/" + QString::number(i));
+				QFile file(":/Shaders/" + shaders[i]);
 				file.copy(shader);
 				file.close();
 		  }
 	 }
-
 }
 
 void DzUnityAction::WriteConfiguration()
@@ -183,7 +176,7 @@ void DzUnityAction::WriteConfiguration()
 // Setup custom FBX export options
 void DzUnityAction::SetExportOptions(DzFileIOSettings& ExportOptions)
 {
-	 ExportOptions.setBoolValue("doSelected", false);
+	 ExportOptions.setBoolValue("doSelected", true);
 	 ExportOptions.setBoolValue("doLights", true);
 	 ExportOptions.setBoolValue("doCameras", true);
 	 ExportOptions.setBoolValue("doAnims", false);
