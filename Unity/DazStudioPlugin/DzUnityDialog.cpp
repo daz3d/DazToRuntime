@@ -163,6 +163,8 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 {
 		  installUnityFilesCheckBox->setChecked(settings->value("InstallUnityFiles").toBool());
 	 }
+	 else
+		  installUnityFilesCheckBox->setChecked(true);
 
 	 // Set Defaults
 	 DzNode* Selection = dzScene->getPrimarySelection();
