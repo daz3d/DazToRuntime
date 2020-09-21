@@ -31,6 +31,7 @@ public:
 	QCheckBox* subdivisionEnabledCheckBox;
 	QGroupBox* advancedSettingsGroupBox;
 	QCheckBox* showFbxDialogCheckBox;
+	QCheckBox* installUnityFilesCheckBox;
 
 	// Pass so the DazTRoUnityAction can access it from the morph dialog
 	QString GetMorphString();
@@ -46,6 +47,7 @@ private slots:
 	void HandleChooseSubdivisionsButton();
 	void HandleSubdivisionCheckBoxChange(int state);
 	void HandleShowFbxDialogCheckBoxChange(int state);
+	void HandleInstallUnityFilesCheckBoxChange(int state);
 
 private:
 	QSettings* settings;

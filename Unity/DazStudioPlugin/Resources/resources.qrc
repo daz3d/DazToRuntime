@@ -3,12 +3,35 @@
 	<qresource prefix="/Images">
 		<file alias="icon">Images/Icon.png</file>
 	</qresource>
+	<qresource prefix="/Scripts">
+		<file alias="Utilities.cs">../../UnityPlugin/Scripts/Utilities.cs</file>
+	</qresource>
 	<qresource prefix="/Editor">
-		<file alias="Daz3DBridge.cs">../../UnityPlugin/Editor/Daz3DBridge.cs</file>
-		<file alias="Daz3DDTUImporter.cs">../../UnityPlugin/Editor/Daz3DDTUImporter.cs</file>
-		<file alias="DazJsonHelper.cs">../../UnityPlugin/Editor/DazJsonHelper.cs</file>
+		<file alias="Daz3DBridge.cs">../../UnityPlugin/Scripts/Editor/Daz3DBridge.cs</file>
+		<file alias="Daz3DDTUImporter.cs">../../UnityPlugin/Scripts/Editor/Daz3DDTUImporter.cs</file>
+		<file alias="DazCoroutine.cs">../../UnityPlugin/Scripts/Editor/DazCoroutine.cs</file>
+		<file alias="DTUConverter.cs">../../UnityPlugin/Scripts/Editor/DTUConverter.cs</file>
 	</qresource>
 	<qresource prefix="/Shaders">
-		<file alias="DazNoDraw.shader">../../UnityPlugin/Shaders/DazNoDraw.shader</file>
+		<file alias="Hair.shadergraph">../../UnityPlugin/Shaders/Hair.shadergraph</file>
+		<file alias="Hair.shadergraph.meta">../../UnityPlugin/Shaders/Hair.shadergraph.meta</file>
+		<file alias="Invisible.shader">../../UnityPlugin/Shaders/Invisible.shader</file>
+		<file alias="Invisible.shader.meta">../../UnityPlugin/Shaders/Invisible.shader.meta</file>
+		<file alias="IrayUber.shadergraph">../../UnityPlugin/Shaders/IrayUber.shadergraph</file>
+		<file alias="IrayUber.shadergraph.meta">../../UnityPlugin/Shaders/IrayUber.shadergraph.meta</file>
+		<file alias="IrayUberParameters.shadersubgraph">../../UnityPlugin/Shaders/IrayUberParameters.shadersubgraph</file>
+		<file alias="IrayUberParameters.shadersubgraph.meta">../../UnityPlugin/Shaders/IrayUberParameters.shadersubgraph.meta</file>
+		<file alias="IrayUberSkin.shadergraph">../../UnityPlugin/Shaders/IrayUberSkin.shadergraph</file>
+		<file alias="IrayUberSkin.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberSkin.shadergraph.meta</file>
+		<file alias="IrayUberTransparent.shadergraph">../../UnityPlugin/Shaders/IrayUberTransparent.shadergraph</file>
+		<file alias="IrayUberTransparent.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberTransparent.shadergraph.meta</file>
+		<file alias="IrayUberTransparentNoOffset.shadergraph">../../UnityPlugin/Shaders/IrayUberTransparentNoOffset.shadergraph</file>
+		<file alias="IrayUberTransparentNoOffset.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberTransparentNoOffset.shadergraph.meta</file>
+	</qresource>
+	<qresource prefix="/Vendors">
+		<file alias="SimpleJSON.cs">../../UnityPlugin/Vendors/SimpleJSON.cs</file>
+	</qresource>
+	<qresource prefix="/DiffusionProfiles">
+		<file alias="IrayUberSkinDiffusionProfile.asset">../../UnityPlugin/DiffusionProfiles/IrayUberSkinDiffusionProfile.asset</file>
 	</qresource>
 </RCC>

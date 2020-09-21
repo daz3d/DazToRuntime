@@ -14,11 +14,11 @@ public:
 
 protected:
 	 DzUnitySubdivisionDialog* SubdivisionDialog;
+	 bool InstallUnityFiles;
 
 	 void executeAction();
 	 void WriteMaterials(DzNode* Node, DzJsonWriter& Stream);
 	 void WriteConfiguration();
 	 void SetExportOptions(DzFileIOSettings& ExportOptions);
-	 void CreateEditorScripts();
-	 void CreateShaders();
+	 void CreateUnityFiles();
 };

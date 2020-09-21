@@ -49,6 +49,7 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 subdivisionEnabledCheckBox = NULL;
 	 advancedSettingsGroupBox = NULL;
 	 showFbxDialogCheckBox = NULL;
+	 installUnityFilesCheckBox = NULL;
 
 	 settings = new QSettings("Daz 3D", "DazToUnity");
 
@@ -106,12 +107,16 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 // Show FBX Dialog option
 	 showFbxDialogCheckBox = new QCheckBox("", this);
 
+	 installUnityFilesCheckBox = new QCheckBox("", this);
+
 	 // Add the widget to the basic dialog
 	 mainLayout->addRow("Asset Name", assetNameEdit);
 	 mainLayout->addRow("Asset Type", assetTypeCombo);
 	 mainLayout->addRow("Enable Morphs", morphsLayout);
 	 mainLayout->addRow("Enable Subdivision", subdivisionLayout);
-	 advancedLayout->addRow("Unity Assets Folder", assetsFolderLayout);
+	 mainLayout->addRow("Unity Assets Folder", assetsFolderLayout);
+	 mainLayout->addRow("Install Unity Files", installUnityFilesCheckBox);
+	 connect(installUnityFilesCheckBox, SIGNAL(stateChanged(int)), this, SLOT(HandleInstallUnityFilesCheckBoxChange(int)));
 	 advancedLayout->addRow("Show FBX Dialog", showFbxDialogCheckBox);
 	 addLayout(mainLayout);
 
@@ -153,6 +158,10 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 if (!settings->value("ShowFBXDialog").isNull())
 	 {
 		  showFbxDialogCheckBox->setChecked(settings->value("ShowFBXDialog").toBool());
+	 }
+	 if (!settings->value("InstallUnityFiles").isNull())
+	 {
+		  installUnityFilesCheckBox->setChecked(settings->value("InstallUnityFiles").toBool());
 	 }
 
 	 // Set Defaults
@@ -251,5 +260,10 @@ void DzUnityDialog::HandleSubdivisionCheckBoxChange(int state)
 void DzUnityDialog::HandleShowFbxDialogCheckBoxChange(int state)
 {
 	 settings->setValue("ShowFBXDialog", state == Qt::Checked);
+}
+
+void DzUnityDialog::HandleInstallUnityFilesCheckBoxChange(int state)
+{
+	 settings->setValue("InstallUnityFiles", state == Qt::Checked);
 }
 #include "moc_DzUnityDialog.cpp"

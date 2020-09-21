@@ -61,14 +61,6 @@ void DzUnityAction::executeAction()
 		  ImportFolder = dlg->assetsFolderEdit->text() + "\\Daz3D";
 		  dir.mkpath(ImportFolder);
 
-		  CreateEditorScripts();
-
-		  CreateShaders();
-
-		  //Create shader folder if it doesn't exist
-		  QString shaderFolder = ImportFolder + "\\Shaders";
-		  dir.mkpath(shaderFolder);
-
 		  // Collect the values from the dialog fields
 		  CharacterName = dlg->assetNameEdit->text();
 		  CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
@@ -79,6 +71,10 @@ void DzUnityAction::executeAction()
 		  ExportSubdivisions = dlg->subdivisionEnabledCheckBox->isChecked();
 		  MorphMapping = dlg->GetMorphMapping();
 		  ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
+		  InstallUnityFiles = dlg->installUnityFilesCheckBox->isChecked();
+
+		  CreateUnityFiles();
+
 		  SubdivisionDialog = DzUnitySubdivisionDialog::Get(dlg);
 		  SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
 		  FBXVersion = QString("FBX 2014 -- Binary");
@@ -91,31 +87,39 @@ void DzUnityAction::executeAction()
 	 }
 }
 
-void DzUnityAction::CreateEditorScripts()
+void DzUnityAction::CreateUnityFiles()
 {
-	 //Create editor folder if it doesn't exist
+	 if (!InstallUnityFiles)
+		  return;
+
+	 //Create shader folder if it doesn't exist
 	 QDir dir;
-	 QString editorFolder = ImportFolder + "\\Editor";
+	 QString scriptsFolder = ImportFolder + "\\Scripts";
+	 dir.mkpath(scriptsFolder);
+
+	 QStringList scripts = QDir(":/Scripts/").entryList();
+	 for (int i = 0; i < scripts.size(); i++)
+	 {
+		  QString script = scriptsFolder + "\\" + scripts[i];
+		  QFile file(":/Scripts/" + scripts[i]);
+		  file.copy(script);
+		  file.close();
+	 }
+
+	 //Create editor folder if it doesn't exist
+	 QString editorFolder = ImportFolder + "\\Scripts\\Editor";
 	 dir.mkpath(editorFolder);
 
 	 QStringList editorScripts = QDir(":/Editor/").entryList();
 	 for (int i = 0; i < editorScripts.size(); i++)
 	 {
 		  QString script = editorFolder + "\\" + editorScripts[i];
-		  QFileInfo check(script);
-		  if (!check.exists() || !check.isFile())
-		  {
-				QFile file(":/Editor/" + editorScripts[i]);
-				file.copy(script);
-				file.close();
-		  }
+		  QFile file(":/Editor/" + editorScripts[i]);
+		  file.copy(script);
+		  file.close();
 	 }
-}
 
-void DzUnityAction::CreateShaders()
-{
 	 //Create shader folder if it doesn't exist
-	 QDir dir;
 	 QString shaderFolder = ImportFolder + "\\Shaders";
 	 dir.mkpath(shaderFolder);
 
@@ -123,13 +127,35 @@ void DzUnityAction::CreateShaders()
 	 for (int i = 0; i < shaders.size(); i++)
 	 {
 		  QString shader = shaderFolder + "\\" + shaders[i];
-		  QFileInfo check(shader);
-		  if (!check.exists() || !check.isFile())
-		  {
-				QFile file(":/Shaders/" + shaders[i]);
-				file.copy(shader);
-				file.close();
-		  }
+		  QFile file(":/Shaders/" + shaders[i]);
+		  file.copy(shader);
+		  file.close();
+	 }
+
+	 //Create vendors folder if it doesn't exist
+	 QString vendorsFolder = ImportFolder + "\\Vendors";
+	 dir.mkpath(vendorsFolder);
+
+	 QStringList vendors = QDir(":/Vendors/").entryList();
+	 for (int i = 0; i < vendors.size(); i++)
+	 {
+		  QString vendor = vendorsFolder + "\\" + vendors[i];
+		  QFile file(":/Vendors/" + vendors[i]);
+		  file.copy(vendor);
+		  file.close();
+	 }
+
+	 //Create DiffusionProfiles folder if it doesn't exist
+	 QString profilesFolder = ImportFolder + "\\DiffusionProfiles";
+	 dir.mkpath(profilesFolder);
+
+	 QStringList profiles = QDir(":/DiffusionProfiles/").entryList();
+	 for (int i = 0; i < profiles.size(); i++)
+	 {
+		  QString profile = profilesFolder + "\\" + profiles[i];
+		  QFile file(":/DiffusionProfiles/" + profiles[i]);
+		  file.copy(profile);
+		  file.close();
 	 }
 }
 
