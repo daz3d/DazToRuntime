@@ -5,6 +5,7 @@
 #include "DazToUnrealMaterials.h"
 #include "DazToUnrealUtils.h"
 #include "DazToUnrealFbx.h"
+#include "DazToUnrealEnvironment.h"
 
 #include "LevelEditor.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -304,13 +305,15 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
 
 	 FString FBXPath = JsonObject->GetStringField(TEXT("FBX File"));
-	 FString AssetName = JsonObject->GetStringField(TEXT("Asset Name"));
+	 FString AssetName = FDazToUnrealUtils::SanitizeName(JsonObject->GetStringField(TEXT("Asset Name")));
 	 FString ImportFolder = JsonObject->GetStringField(TEXT("Import Folder"));
 	 DazAssetType AssetType = DazAssetType::StaticMesh;
 	 if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("SkeletalMesh"))
 		  AssetType = DazAssetType::SkeletalMesh;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Animation"))
-		  AssetType = DazAssetType::Animation;;
+		  AssetType = DazAssetType::Animation;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Environment"))
+		 AssetType = DazAssetType::Environment;
 
 	 // Set up the folder paths
 	 FString ImportDirectory = FPaths::ProjectDir() / TEXT("Import");
@@ -352,6 +355,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 if (!MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return false;
 	 if (!MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return false;
 
+	 if (AssetType == DazAssetType::Environment)
+	 {
+		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
+		 return nullptr;
+	 }
+
 	 // If there isn't an FBX file, stop
 	 if (!FPaths::FileExists(FBXFile))
 	 {
@@ -383,7 +392,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
 				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
 				FString TexturePath = material->GetStringField(TEXT("Texture"));
-				FString TextureName = FPaths::GetBaseFilename(TexturePath).Replace(TEXT(" "), TEXT("_")).Replace(TEXT("&"), TEXT("_"));
+				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
 
 				if (!MaterialProperties.Contains(MaterialName))
 				{
@@ -441,7 +450,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
 				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
 				FString TexturePath = material->GetStringField(TEXT("Texture"));
-				FString TextureName = FPaths::GetBaseFilename(TexturePath).Replace(TEXT(" "), TEXT("_")).Replace(TEXT("&"), TEXT("_")).Replace(TEXT("("), TEXT("_")).Replace(TEXT(")"), TEXT("_"));
+				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
 
 				if (!MaterialProperties.Contains(MaterialName))
 				{

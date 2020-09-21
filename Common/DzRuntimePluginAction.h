@@ -6,6 +6,13 @@
 #include "QtCore/qfile.h"
 #include "QtCore/qtextstream.h"
 
+// Struct to remember attachment info
+struct AttachmentInfo
+{
+	DzNode* Parent;
+	DzNode* Child;
+};
+
 class DzRuntimePluginAction : public DzAction {
 	 Q_OBJECT
 public:
@@ -32,6 +39,7 @@ protected:
 	 virtual QString getDefaultMenuPath() const { return tr("&File/Send To"); }
 
 	 virtual void Export();
+	 virtual void ExportNode(DzNode* Node);
 
 	 virtual void WriteConfiguration() = 0;
 	 virtual void SetExportOptions(DzFileIOSettings &ExportOptions) = 0;
@@ -39,4 +47,11 @@ protected:
 	 // Need to temporarily rename surfaces if there is a name collision
 	 void RenameDuplicateMaterials(DzNode* Node, QList<QString>& MaterialNames, QMap<DzMaterial*, QString>& OriginalMaterialNames);
 	 void UndoRenameDuplicateMaterials(DzNode* Node, QList<QString>& MaterialNames, QMap<DzMaterial*, QString>& OriginalMaterialNames);
+
+	 // Used to find all the unique props in a scene for Environment export
+	 void GetScenePropList(DzNode* Node, QMap<QString, DzNode*>& Types);
+
+	 // During Environment export props need to get disconnected as they are exported.
+	 void DisconnectNode(DzNode* Node, QList<AttachmentInfo>& AttachmentList);
+	 void ReconnectNodes(QList<AttachmentInfo>& AttachmentList);
 };

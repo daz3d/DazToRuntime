@@ -19,7 +19,8 @@ enum DazAssetType
 {
 	SkeletalMesh,
 	StaticMesh,
-	Animation
+	Animation,
+	Environment
 };
 
 
