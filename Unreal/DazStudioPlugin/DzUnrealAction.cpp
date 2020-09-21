@@ -2,6 +2,7 @@
 #include <QtGui/QMessageBox>
 #include <QtNetwork/qudpsocket.h>
 #include <QtNetwork/qabstractsocket.h>
+#include <QUuid.h>
 
 #include <dzapp.h>
 #include <dzscene.h>
@@ -14,6 +15,12 @@
 #include <dzimageproperty.h>
 #include <dzcolorproperty.h>
 #include <dpcimages.h>
+#include <dzfigure.h>
+#include <dzfacetmesh.h>
+#include <dzbone.h>
+//#include <dznodeinstance.h>
+#include "idzsceneasset.h"
+#include "dzuri.h"
 
 #include "DzUnrealDialog.h"
 #include "DzUnrealAction.h"
@@ -93,29 +100,43 @@ void DzUnrealAction::WriteConfiguration()
 	 writer.addMember("FBX File", CharacterFBX);
 	 writer.addMember("Import Folder", CharacterFolder);
 
-	 writer.startMemberArray("Materials", true);
-	 WriteMaterials(Selection, writer);
-	 writer.finishArray();
-
-	 writer.startMemberArray("Morphs", true);
-	 if (ExportMorphs)
+	 if (AssetType != "Environment")
 	 {
-		  for (QMap<QString, QString>::iterator i = MorphMapping.begin(); i != MorphMapping.end(); ++i)
-		  {
-				writer.startObject(true);
-				writer.addMember("Name", i.key());
-				writer.addMember("Label", i.value());
-				writer.finishObject();
-		  }
+		 writer.startMemberArray("Materials", true);
+		 WriteMaterials(Selection, writer);
+		 writer.finishArray();
+
+		 writer.startMemberArray("Morphs", true);
+		 if (ExportMorphs)
+		 {
+			  for (QMap<QString, QString>::iterator i = MorphMapping.begin(); i != MorphMapping.end(); ++i)
+			  {
+					writer.startObject(true);
+					writer.addMember("Name", i.key());
+					writer.addMember("Label", i.value());
+					writer.finishObject();
+			  }
+		 }
+
+		 writer.finishArray();
+
+
+		 writer.startMemberArray("Subdivisions", true);
+		 if (ExportSubdivisions)
+			 SubdivisionDialog->WriteSubdivisions(writer);
+
+		 writer.finishArray();
 	 }
 
-	 writer.finishArray();
+	 if (AssetType == "Environment")
+	 {
+		 writer.startMemberArray("Instances", true);
+		 QMap<QString, DzMatrix3> WritingInstances;
+		 QList<DzGeometry*> ExportedGeometry;
+		 WriteInstances(Selection, writer, WritingInstances, ExportedGeometry);
+		 writer.finishArray();
+	 }
 
-	 writer.startMemberArray("Subdivisions", true);
-	 if (ExportSubdivisions)
-		  SubdivisionDialog->WriteSubdivisions(writer);
-
-	 writer.finishArray();
 	 writer.finishObject();
 
 	 DTUfile.close();
@@ -253,5 +274,61 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 	 }
 }
 
+void DzUnrealAction::WriteInstances(DzNode* Node, DzJsonWriter& Writer, QMap<QString, DzMatrix3>& WritenInstances, QList<DzGeometry*>& ExportedGeometry, QUuid ParentID)
+{
+	DzObject* Object = Node->getObject();
+	DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
+	DzGeometry* Geometry = Shape ? Shape->getGeometry() : NULL;
+	DzBone* Bone = qobject_cast<DzBone*>(Node);
+
+	if (Bone == nullptr && Geometry)
+	{
+		ExportedGeometry.append(Geometry);
+		ParentID = WriteInstance(Node, Writer, ParentID);
+	}
+
+	for (int ChildIndex = 0; ChildIndex < Node->getNumNodeChildren(); ChildIndex++)
+	{
+		DzNode* ChildNode = Node->getNodeChild(ChildIndex);
+		WriteInstances(ChildNode, Writer, WritenInstances, ExportedGeometry, ParentID);
+	}
+}
+
+QUuid DzUnrealAction::WriteInstance(DzNode* Node, DzJsonWriter& Writer, QUuid ParentID)
+{
+	QString Path = Node->getAssetFileInfo().getUri().getFilePath();
+	QFile File(Path);
+	QString FileName = File.fileName();
+	QStringList Items = FileName.split("/");
+	QStringList Parts = Items[Items.count() - 1].split(".");
+	QString Name = Parts[0].remove(QRegExp("[^A-Za-z0-9_]"));
+	QUuid Uid = QUuid::createUuid();
+
+	Writer.startObject(true);
+	Writer.addMember("Version", 1);
+	Writer.addMember("InstanceLabel", Node->getLabel());
+	Writer.addMember("InstanceAsset", Name);
+	Writer.addMember("ParentID", ParentID.toString());
+	Writer.addMember("Guid", Uid.toString());
+	Writer.addMember("TranslationX", Node->getWSPos().m_x);
+	Writer.addMember("TranslationY", Node->getWSPos().m_y);
+	Writer.addMember("TranslationZ", Node->getWSPos().m_z);
+
+	DzQuat RotationQuat = Node->getWSRot();
+	DzVec3 Rotation;
+	RotationQuat.getValue(Node->getRotationOrder(), Rotation);
+	Writer.addMember("RotationX", Rotation.m_x);
+	Writer.addMember("RotationY", Rotation.m_y);
+	Writer.addMember("RotationZ", Rotation.m_z);
+
+	DzMatrix3 Scale = Node->getWSScale();
+
+	Writer.addMember("ScaleX", Scale.row(0).length());
+	Writer.addMember("ScaleY", Scale.row(1).length());
+	Writer.addMember("ScaleZ", Scale.row(2).length());
+	Writer.finishObject();
+
+	return Uid;
+}
 
 #include "moc_DzUnrealAction.cpp"

@@ -49,10 +49,141 @@ DzRuntimePluginAction::~DzRuntimePluginAction()
 
 void DzRuntimePluginAction::Export()
 {
-	 // FBX Export
-	 Selection = dzScene->getPrimarySelection();
-	 if (!Selection)
-		  return;
+	// FBX Export
+	Selection = dzScene->getPrimarySelection();
+	if (!Selection)
+		return;
+
+	QMap<QString, DzNode*> PropToInstance;
+	if (AssetType == "Environment")
+	{
+		// Store off the original export information
+		QString OriginalCharacterName = CharacterName;
+		DzNode* OriginalSelection = Selection;
+
+		// Find all the different types of props in the scene
+		GetScenePropList(Selection, PropToInstance);
+		QMap<QString, DzNode*>::iterator iter;
+		for (iter = PropToInstance.begin(); iter != PropToInstance.end(); ++iter)
+		{
+			// Override the export info for exporting this prop
+			AssetType = "StaticMesh";
+			CharacterName = iter.key();
+			CharacterName = CharacterName.remove(QRegExp("[^A-Za-z0-9_]"));
+			CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
+			CharacterFBX = CharacterFolder + CharacterName + ".fbx";
+			DzNode* Node = iter.value();
+
+			// If this is a figure, send it as a skeletal mesh
+			if (DzSkeleton* Skeleton = Node->getSkeleton())
+			{
+				if (DzFigure* Figure = qobject_cast<DzFigure*>(Skeleton))
+				{
+					AssetType = "SkeletalMesh";
+				}
+			}
+
+			// Disconnect the asset being sent from everything else
+			QList<AttachmentInfo> AttachmentList;
+			DisconnectNode(Node, AttachmentList);
+
+			// Set the selection so this will be the exported asset
+			Selection = Node;
+
+			// Store the current transform and zero it out.
+			DzVec3 Location;
+			DzQuat Rotation;
+			DzMatrix3 Scale;
+
+			Node->getWSTransform(Location, Rotation, Scale);
+			Node->setWSTransform(DzVec3(0.0f, 0.0f, 0.0f), DzQuat(), DzMatrix3(true));
+
+			// Export
+			ExportNode(Node);
+
+			// Put the item back where it was
+			Node->setWSTransform(Location, Rotation, Scale);
+
+			// Reconnect all the nodes
+			ReconnectNodes(AttachmentList);
+		}
+
+		// After the props have been exported, export the environment
+		CharacterName = OriginalCharacterName;
+		CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
+		CharacterFBX = CharacterFolder + CharacterName + ".fbx";
+		Selection = OriginalSelection;
+		AssetType = "Environment";
+		ExportNode(Selection);
+	}
+	else
+	{
+		DzNode* Selection = dzScene->getPrimarySelection();
+		ExportNode(Selection);
+	}
+}
+
+void DzRuntimePluginAction::DisconnectNode(DzNode* Node, QList<AttachmentInfo>& AttachmentList)
+{
+	AttachmentInfo ParentAttachment;
+	if (Node->getNodeParent())
+	{
+		// Don't disconnect a figures bones
+		if (DzBone* Bone = qobject_cast<DzBone*>(Node))
+		{
+
+		}
+		else
+		{
+			ParentAttachment.Parent = Node->getNodeParent();
+			ParentAttachment.Child = Node;
+			AttachmentList.append(ParentAttachment);
+			Node->getNodeParent()->removeNodeChild(Node);
+		}
+	}
+
+	QList<DzNode*> ChildNodes;
+	for (int ChildIndex = Node->getNumNodeChildren() - 1; ChildIndex >= 0; ChildIndex--)
+	{
+		DzNode* ChildNode = Node->getNodeChild(ChildIndex);
+		if (DzBone* Bone = qobject_cast<DzBone*>(ChildNode))
+		{
+
+		}
+		else
+		{
+			DzNode* ChildNode = Node->getNodeChild(ChildIndex);
+			AttachmentInfo ChildAttachment;
+			ChildAttachment.Parent = Node;
+			ChildAttachment.Child = ChildNode;
+			AttachmentList.append(ChildAttachment);
+			Node->removeNodeChild(ChildNode);
+		}
+		DisconnectNode(ChildNode, AttachmentList);
+	}
+}
+
+void DzRuntimePluginAction::ReconnectNodes(QList<AttachmentInfo>& AttachmentList)
+{
+	foreach(AttachmentInfo Attachment, AttachmentList)
+	{
+		Attachment.Parent->addNodeChild(Attachment.Child);
+	}
+}
+
+
+void DzRuntimePluginAction::ExportNode(DzNode* Node)
+{
+	dzScene->selectAllNodes(false);
+	 dzScene->setPrimarySelection(Node);
+
+	 if (AssetType == "Environment")
+	 {
+		 QDir dir;
+		 dir.mkpath(CharacterFolder);
+		 WriteConfiguration();
+		 return;
+	 }
 
 	 DzExportMgr* ExportManager = dzApp->getExportMgr();
 	 DzExporter* Exporter = ExportManager->findExporterByClassName("DzFbxExporter");
@@ -62,7 +193,7 @@ void DzRuntimePluginAction::Export()
 		  DzFileIOSettings ExportOptions;
 		  ExportOptions.setBoolValue("doSelected", true);
 		  ExportOptions.setBoolValue("doVisible", false);
-		  if (AssetType == "SkeletalMesh" || AssetType == "StaticMesh")
+		  if (AssetType == "SkeletalMesh" || AssetType == "StaticMesh" || AssetType == "Environment")
 		  {
 				ExportOptions.setBoolValue("doFigures", true);
 				ExportOptions.setBoolValue("doProps", true);
@@ -100,10 +231,13 @@ void DzRuntimePluginAction::Export()
 		  ExportOptions.setBoolValue("doCollapseUVTiles", false);
 
 		  // get the top level node for things like clothing so we don't get dupe material names
-		  DzNode* Parent = Selection;
-		  while (Parent->getNodeParent() != NULL)
+		  DzNode* Parent = Node;
+		  if (AssetType != "Environment")
 		  {
-				Parent = Parent->getNodeParent();
+			  while (Parent->getNodeParent() != NULL)
+			  {
+				  Parent = Parent->getNodeParent();
+			  }
 		  }
 
 		  // rename duplicate material names
@@ -162,6 +296,48 @@ void DzRuntimePluginAction::UndoRenameDuplicateMaterials(DzNode* Node, QList<QSt
 	 {
 		  iter.key()->setName(iter.value());
 	 }
+}
+
+void DzRuntimePluginAction::GetScenePropList(DzNode* Node, QMap<QString, DzNode*>& Types)
+{
+	DzObject* Object = Node->getObject();
+	DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
+	DzGeometry* Geometry = Shape ? Shape->getGeometry() : NULL;
+	DzSkeleton* Skeleton = Node->getSkeleton();
+	DzFigure* Figure = Skeleton ? qobject_cast<DzFigure*>(Skeleton) : NULL;
+	//QString AssetId = Node->getAssetId();
+	//IDzSceneAsset::AssetType Type = Node->getAssetType();
+
+	// Use the FileName to generate a name for the prop to be exported
+	QString Path = Node->getAssetFileInfo().getUri().getFilePath();
+	QFile File(Path);
+	QString FileName = File.fileName();
+	QStringList Items = FileName.split("/");
+	QStringList Parts = Items[Items.count() - 1].split(".");
+	QString Name = Parts[0].remove(QRegExp("[^A-Za-z0-9_]"));
+
+	if (Figure)
+	{
+		QString FigureAssetId = Figure->getAssetId();
+		if (!Types.contains(Name))
+		{
+			Types.insert(Name, Node);
+		}
+	}
+	else if (Geometry)
+	{
+		if (!Types.contains(Name))
+		{
+			Types.insert(Name, Node);
+		}
+	}
+
+	// Looks through the child nodes for more props
+	for (int ChildIndex = 0; ChildIndex < Node->getNumNodeChildren(); ChildIndex++)
+	{
+		DzNode* ChildNode = Node->getNodeChild(ChildIndex);
+		GetScenePropList(ChildNode, Types);
+	}
 }
 
 #include "moc_DzRuntimePluginAction.cpp"

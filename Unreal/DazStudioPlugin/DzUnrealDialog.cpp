@@ -82,6 +82,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	assetTypeCombo->addItem("Skeletal Mesh");
 	assetTypeCombo->addItem("Static Mesh");
 	assetTypeCombo->addItem("Animation");
+	assetTypeCombo->addItem("Environment");
 	//assetTypeCombo->addItem("Pose");
 
 	// Morphs
@@ -198,11 +199,11 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	if (dzScene->getFilename().length() > 0)
 	{
 		QFileInfo fileInfo = QFileInfo(dzScene->getFilename());
-		assetNameEdit->setText(fileInfo.baseName().replace(" ", "_"));
+		assetNameEdit->setText(fileInfo.baseName().remove(QRegExp("[^A-Za-z0-9_]")));
 	}
 	else if(dzScene->getPrimarySelection())
 	{
-		assetNameEdit->setText(Selection->getLabel().replace(" ", "_"));
+		assetNameEdit->setText(Selection->getLabel().remove(QRegExp("[^A-Za-z0-9_]")));
 	}
 
 	if (qobject_cast<DzSkeleton*>(Selection))
