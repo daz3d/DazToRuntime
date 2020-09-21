@@ -160,7 +160,6 @@ void DzUnityAction::WriteConfiguration()
 				writer.finishObject();
 		  }
 	 }
-
 	 writer.finishArray();
 
 	 writer.startMemberArray("Subdivisions", true);
@@ -215,16 +214,21 @@ void DzUnityAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 				DzMaterial* Material = Shape->getMaterial(i);
 				if (Material)
 				{
+					 Writer.startObject(true);
+					 Writer.addMember("Version", 2);
+					 Writer.addMember("Asset Name", Node->getLabel());
+					 Writer.addMember("Material Name", Material->getName());
+					 Writer.addMember("Material Type", Material->getMaterialName());
+
 					 DzPresentation* presentation = Node->getPresentation();
-					 if (presentation)
+					 if (presentation != nullptr)
 					 {
 						  const QString presentationType = presentation->getType();
-						  Writer.startObject(true);
-						  Writer.addMember("Version", 2);
-						  Writer.addMember("Asset Name", Node->getLabel());
-						  Writer.addMember("Material Name", Material->getName());
-						  Writer.addMember("Material Type", Material->getMaterialName());
 						  Writer.addMember("Value", presentationType);
+					 }
+					 else
+					 {
+						  Writer.addMember("Value", QString("Unknown"));
 					 }
 
 					 Writer.startMemberArray("Properties", true);
@@ -291,6 +295,7 @@ void DzUnityAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 						  }
 					 }
 					 Writer.finishArray();
+
 					 Writer.finishObject();
 				}
 		  }
