@@ -166,6 +166,7 @@ void DzUnityAction::WriteConfiguration()
 	 DTUfile.open(QIODevice::WriteOnly);
 	 DzJsonWriter writer(&DTUfile);
 	 writer.startObject(true);
+	 writer.addMember("Asset Id", Selection->getAssetId());
 	 writer.addMember("Asset Name", CharacterName);
 	 writer.addMember("Asset Type", AssetType);
 	 writer.addMember("FBX File", CharacterFBX);
