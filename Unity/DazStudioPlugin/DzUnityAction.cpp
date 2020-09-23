@@ -70,7 +70,9 @@ void DzUnityAction::executeAction()
 		  ExportMorphs = dlg->morphsEnabledCheckBox->isChecked();
 		  ExportSubdivisions = dlg->subdivisionEnabledCheckBox->isChecked();
 		  MorphMapping = dlg->GetMorphMapping();
+#ifdef FBXOPTIONS
 		  ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
+#endif
 		  InstallUnityFiles = dlg->installUnityFilesCheckBox->isChecked();
 
 		  CreateUnityFiles();

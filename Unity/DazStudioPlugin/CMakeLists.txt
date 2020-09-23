@@ -5,6 +5,11 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(DZ_PLUGIN_TGT_NAME dzunitybridge)
 set(DZ_PLUGIN_PROJECT_NAME "DzUnityBridge")
 
+option(FBXOPTIONS "Show FBX Export Dialog" OFF)
+if(FBXOPTIONS)
+	add_compile_definitions(FBXOPTIONS)
+endif()
+
 # if building a plugin and you want the compiled result placed in the Daz Studio ./plugins directory
 if(DAZ_STUDIO_EXE_DIR)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${DAZ_STUDIO_EXE_DIR}/plugins)

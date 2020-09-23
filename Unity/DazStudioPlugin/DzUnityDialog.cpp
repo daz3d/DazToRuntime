@@ -48,7 +48,9 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 subdivisionButton = NULL;
 	 subdivisionEnabledCheckBox = NULL;
 	 advancedSettingsGroupBox = NULL;
+#ifdef FBXOPTIONS
 	 showFbxDialogCheckBox = NULL;
+#endif
 	 installUnityFilesCheckBox = NULL;
 
 	 settings = new QSettings("Daz 3D", "DazToUnity");
@@ -105,8 +107,6 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 connect(subdivisionEnabledCheckBox, SIGNAL(stateChanged(int)), this, SLOT(HandleSubdivisionCheckBoxChange(int)));
 
 	 // Show FBX Dialog option
-	 showFbxDialogCheckBox = new QCheckBox("", this);
-
 	 installUnityFilesCheckBox = new QCheckBox("", this);
 
 	 // Add the widget to the basic dialog
@@ -117,14 +117,16 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 mainLayout->addRow("Unity Assets Folder", assetsFolderLayout);
 	 mainLayout->addRow("Install Unity Files", installUnityFilesCheckBox);
 	 connect(installUnityFilesCheckBox, SIGNAL(stateChanged(int)), this, SLOT(HandleInstallUnityFilesCheckBoxChange(int)));
-	 advancedLayout->addRow("Show FBX Dialog", showFbxDialogCheckBox);
 	 addLayout(mainLayout);
+#ifdef FBXOPTIONS
+	 showFbxDialogCheckBox = new QCheckBox("", this);
+	 advancedLayout->addRow("Show FBX Dialog", showFbxDialogCheckBox);
 
 	 // Advanced
 	 advancedSettingsGroupBox = new QGroupBox("Advanced Settings", this);
 	 advancedSettingsGroupBox->setLayout(advancedLayout);
 	 addWidget(advancedSettingsGroupBox);
-
+#endif
 
 	 // Make the dialog fit its contents, with a minimum width, and lock it down
 	 resize(QSize(500, 0).expandedTo(minimumSizeHint()));
@@ -155,10 +157,12 @@ DzUnityDialog::DzUnityDialog(QWidget* parent) :
 	 {
 		  subdivisionEnabledCheckBox->setChecked(settings->value("SubdivisionEnabled").toBool());
 	 }
+#ifdef FBXOPTIONS
 	 if (!settings->value("ShowFBXDialog").isNull())
 	 {
 		  showFbxDialogCheckBox->setChecked(settings->value("ShowFBXDialog").toBool());
 	 }
+#endif
 	 if (!settings->value("InstallUnityFiles").isNull())
 	 {
 		  installUnityFilesCheckBox->setChecked(settings->value("InstallUnityFiles").toBool());
@@ -259,10 +263,12 @@ void DzUnityDialog::HandleSubdivisionCheckBoxChange(int state)
 	 settings->setValue("SubdivisionEnabled", state == Qt::Checked);
 }
 
+#ifdef FBXOPTIONS
 void DzUnityDialog::HandleShowFbxDialogCheckBoxChange(int state)
 {
 	 settings->setValue("ShowFBXDialog", state == Qt::Checked);
 }
+#endif
 
 void DzUnityDialog::HandleInstallUnityFilesCheckBoxChange(int state)
 {
