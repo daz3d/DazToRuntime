@@ -5,12 +5,14 @@
 	</qresource>
 	<qresource prefix="/Scripts">
 		<file alias="Utilities.cs">../../UnityPlugin/Scripts/Utilities.cs</file>
+		<file alias="Daz3DInstance.cs">../../UnityPlugin/Scripts/Daz3DInstance.cs</file>
 	</qresource>
 	<qresource prefix="/Editor">
 		<file alias="Daz3DBridge.cs">../../UnityPlugin/Scripts/Editor/Daz3DBridge.cs</file>
 		<file alias="Daz3DDTUImporter.cs">../../UnityPlugin/Scripts/Editor/Daz3DDTUImporter.cs</file>
 		<file alias="DazCoroutine.cs">../../UnityPlugin/Scripts/Editor/DazCoroutine.cs</file>
 		<file alias="DTUConverter.cs">../../UnityPlugin/Scripts/Editor/DTUConverter.cs</file>
+		<file alias="DazJSONHelper.cs">../../UnityPlugin/Scripts/Editor/DazJSONHelper.cs</file>
 	</qresource>
 	<qresource prefix="/Shaders">
 		<file alias="Hair.shadergraph">../../UnityPlugin/Shaders/Hair.shadergraph</file>
@@ -25,13 +27,44 @@
 		<file alias="IrayUberSkin.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberSkin.shadergraph.meta</file>
 		<file alias="IrayUberTransparent.shadergraph">../../UnityPlugin/Shaders/IrayUberTransparent.shadergraph</file>
 		<file alias="IrayUberTransparent.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberTransparent.shadergraph.meta</file>
+		<file alias="IrayUberTranslucent.shadergraph">../../UnityPlugin/Shaders/IrayUberTranslucent.shadergraph</file>
+		<file alias="IrayUberTranslucent.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberTranslucent.shadergraph.meta</file>
 		<file alias="IrayUberTransparentNoOffset.shadergraph">../../UnityPlugin/Shaders/IrayUberTransparentNoOffset.shadergraph</file>
 		<file alias="IrayUberTransparentNoOffset.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberTransparentNoOffset.shadergraph.meta</file>
+		<file alias="IrayMetal.shadergraph">../../UnityPlugin/Shaders/IrayMetal.shadergraph</file>
+		<file alias="IrayMetal.shadergraph.meta">../../UnityPlugin/Shaders/IrayMetal.shadergraph.meta</file>
+		<file alias="IrayUberSpec.shadergraph">../../UnityPlugin/Shaders/IrayUberSpec.shadergraph</file>
+		<file alias="IrayUberSpec.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberSpec.shadergraph.meta</file>
+		<file alias="IrayUberMetalV2.shadergraph">../../UnityPlugin/Shaders/IrayUberMetalV2.shadergraph</file>
+		<file alias="IrayUberMetalV2.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberMetalV2.shadergraph.meta</file>
+		<file alias="IrayUberSpecV2.shadergraph">../../UnityPlugin/Shaders/IrayUberSpecV2.shadergraph</file>
+		<file alias="IrayUberSpecV2.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberSpecV2.shadergraph.meta</file>
+		<file alias="IrayUberSkinV2.shadergraph">../../UnityPlugin/Shaders/IrayUberSkinV2.shadergraph</file>
+		<file alias="IrayUberSkinV2.shadergraph.meta">../../UnityPlugin/Shaders/IrayUberSkinV2.shadergraph.meta</file>
+		<file alias="Wet.shadergraph">../../UnityPlugin/Shaders/Wet.shadergraph</file>
+		<file alias="Wet.shadergraph.meta">../../UnityPlugin/Shaders/Wet.shadergraph.meta</file>
+	</qresource>
+	<qresource prefix="/ShaderHelpers">
+		<file alias="GetLighDirection.hlsl">../../UnityPlugin/Shaders/Helpers/GetLightDirection.hlsl</file>
+		<file alias="GetLighDirection.hlsl.meta">../../UnityPlugin/Shaders/Helpers/GetLightDirection.hlsl.meta</file>
+		<file alias="LightDirection.shadersubgraph">../../UnityPlugin/Shaders/Helpers/LightDirection.shadersubgraph</file>
+		<file alias="LightDirection.shadersubgraph.meta">../../UnityPlugin/Shaders/Helpers/LightDirection.shadersubgraph.meta</file>
 	</qresource>
 	<qresource prefix="/Vendors">
 		<file alias="SimpleJSON.cs">../../UnityPlugin/Vendors/SimpleJSON.cs</file>
 	</qresource>
 	<qresource prefix="/DiffusionProfiles">
 		<file alias="IrayUberSkinDiffusionProfile.asset">../../UnityPlugin/DiffusionProfiles/IrayUberSkinDiffusionProfile.asset</file>
+		<file alias="IrayUberSkinDiffusionProfile.asset.meta">../../UnityPlugin/DiffusionProfiles/GenericDiffusionProfile.asset.meta</file>
+	</qresource>
+	<qresource prefix="/Resources">
+		<file alias="Daz_Head_Color_5K.png">../../UnityPlugin/Resources/Daz_Head_Color_5K.png</file>
+		<file alias="Daz_Head_Color_5K.png.meta">../../UnityPlugin/Resources/Daz_Head_Color_5K.png.meta</file>
+		<file alias="Daz_Logo_Black_4K.png">../../UnityPlugin/Resources/Daz_Logo_Black_4K.png</file>
+		<file alias="Daz_Logo_Black_4K.png.meta">../../UnityPlugin/Resources/Daz_Logo_Black_4K.png.meta</file>
+		<file alias="Daz_Logo_White_4K.png">../../UnityPlugin/Resources/Daz_Logo_White_4K.png</file>
+		<file alias="Daz_Logo_White_4K.png.meta">../../UnityPlugin/Resources/Daz_Logo_White_4K.png.meta</file>
+		<file alias="ReadMe.txt">../../UnityPlugin/Resources/ReadMe.txt</file>
+		<file alias="ReadMe.txt.meta">../../UnityPlugin/Resources/ReadMe.txt.meta</file>
 	</qresource>
 </RCC>

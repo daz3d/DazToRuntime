@@ -20,5 +20,8 @@ protected:
 	 void WriteMaterials(DzNode* Node, DzJsonWriter& Stream);
 	 void WriteConfiguration();
 	 void SetExportOptions(DzFileIOSettings& ExportOptions);
-	 void CreateUnityFiles();
+	 void CreateUnityFiles(bool replace = true);
+
+	 bool CopyFile(QFile *file, QString *dst, bool replace = true, bool compareFiles = true);
+	 QString GetMD5(const QString &path);
 };

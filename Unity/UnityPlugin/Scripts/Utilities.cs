@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using UnityEngine;
 
 namespace Daz3D
 {
@@ -37,6 +38,11 @@ namespace Daz3D
 		{
 			var bytes = MD5AsBytes(path);
 			return BitConverter.ToString(bytes).Replace("-","").ToLowerInvariant();
+		}
+
+		public static float GetStrengthFromColor(Color color)
+		{
+			return color.grayscale;
 		}
 	}
 }

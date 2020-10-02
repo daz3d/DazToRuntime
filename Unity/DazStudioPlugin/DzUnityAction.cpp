@@ -2,6 +2,7 @@
 #include <QtGui/QMessageBox>
 #include <QtNetwork/qudpsocket.h>
 #include <QtNetwork/qabstractsocket.h>
+#include <QCryptographicHash>
 #include <QtCore/qdir.h>
 
 #include <dzapp.h>
@@ -89,7 +90,58 @@ void DzUnityAction::executeAction()
 	 }
 }
 
-void DzUnityAction::CreateUnityFiles()
+QString DzUnityAction::GetMD5(const QString &path)
+{
+	auto algo = QCryptographicHash::Md5;
+	QFile sourceFile(path);
+    qint64 fileSize = sourceFile.size();
+    const qint64 bufferSize = 10240;
+
+    if (sourceFile.open(QIODevice::ReadOnly))
+    {
+        char buffer[bufferSize];
+        int bytesRead;
+        int readSize = qMin(fileSize, bufferSize);
+
+        QCryptographicHash hash(algo);
+        while (readSize > 0 && (bytesRead = sourceFile.read(buffer, readSize)) > 0) 
+        {
+            fileSize -= bytesRead;
+            hash.addData(buffer, bytesRead);
+            readSize = qMin(fileSize, bufferSize);
+        }
+
+        sourceFile.close();
+        return QString(hash.result().toHex());
+    }
+    return QString();
+}
+
+bool DzUnityAction::CopyFile(QFile *file, QString *dst, bool replace, bool compareFiles)
+{
+	if(replace)
+	{
+		if(compareFiles)
+		{
+			auto srcFileMD5 = GetMD5(file->fileName());
+			auto dstFileMD5 = GetMD5(*dst);
+
+			if(srcFileMD5.compare(dstFileMD5) == 0)
+			{
+				return false;
+			}
+		}
+
+		if(QFile::exists(*dst))
+		{
+			QFile::remove(*dst);
+		}
+	}
+
+	return file->copy(*dst);
+}
+
+void DzUnityAction::CreateUnityFiles(bool replace)
 {
 	 if (!InstallUnityFiles)
 		  return;
@@ -104,7 +156,7 @@ void DzUnityAction::CreateUnityFiles()
 	 {
 		  QString script = scriptsFolder + "\\" + scripts[i];
 		  QFile file(":/Scripts/" + scripts[i]);
-		  file.copy(script);
+		  CopyFile(&file, &script, replace);
 		  file.close();
 	 }
 
@@ -117,7 +169,7 @@ void DzUnityAction::CreateUnityFiles()
 	 {
 		  QString script = editorFolder + "\\" + editorScripts[i];
 		  QFile file(":/Editor/" + editorScripts[i]);
-		  file.copy(script);
+		  CopyFile(&file, &script, replace);
 		  file.close();
 	 }
 
@@ -130,7 +182,7 @@ void DzUnityAction::CreateUnityFiles()
 	 {
 		  QString shader = shaderFolder + "\\" + shaders[i];
 		  QFile file(":/Shaders/" + shaders[i]);
-		  file.copy(shader);
+		  CopyFile(&file, &shader, replace);
 		  file.close();
 	 }
 
@@ -143,7 +195,7 @@ void DzUnityAction::CreateUnityFiles()
 	 {
 		  QString vendor = vendorsFolder + "\\" + vendors[i];
 		  QFile file(":/Vendors/" + vendors[i]);
-		  file.copy(vendor);
+		  CopyFile(&file, &vendor, replace);
 		  file.close();
 	 }
 
@@ -156,7 +208,7 @@ void DzUnityAction::CreateUnityFiles()
 	 {
 		  QString profile = profilesFolder + "\\" + profiles[i];
 		  QFile file(":/DiffusionProfiles/" + profiles[i]);
-		  file.copy(profile);
+		  CopyFile(&file, &profile, replace);
 		  file.close();
 	 }
 }

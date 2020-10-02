@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 
-namespace Daz
+namespace Daz3D
 {
     /// <summary>
     /// A compact coroutine manager for executing coroutines in the unity editor

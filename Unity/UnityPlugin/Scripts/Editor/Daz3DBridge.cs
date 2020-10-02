@@ -1,163 +1,227 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using System;
+
+
+
 
 namespace Daz3D
 {
+
+    using record = Daz3DDTUImporter.ImportEventRecord;
+
     /// <summary>
     /// An editor window where unity user can monitor the progress and history and details of DTU import activity 
     /// </summary>
     public class Daz3DBridge : EditorWindow
     {
         private Vector2 scrollPos;
-        //private ErrorState s_errorState = ErrorState.Clean;
-
-
-
+        System.Tuple<UnityEngine.Object, Texture> thumbnail = null;
 
         private static Daz3DBridge _instance;
-        [MenuItem("Daz3D/Daz3DBridge")]
+        [MenuItem("Daz3D/Open Daz3DBridge window")]
         public static void ShowWindow()
         {
             _instance = (Daz3DBridge)GetWindow(typeof(Daz3DBridge));
+            _instance.titleContent = new GUIContent("Daz3D Bridge");
         }
 
-        public enum ErrorState
-        {
-            Clean,
-            NoDazRootPath,
-            NoDazScenePath
-        }
-
-        void OnFocus()
-        {
-            CheckRefresh();
-        }
-
-        void OnEnable()
-        {
-            CheckRefresh();
-        }
-
-        void CheckRefresh()
-        {
-            //CreateBaseMaterial();
-            CheckDazDirectories();
-        }
-
-        void CheckDazDirectories()
-        {
-            //var assetsDir = BuildUnityPath(Application.dataPath, "Assets");
-            //s_dazRootDir = BuildUnityPath(Application.dataPath, "Daz3D");
-
-            //if (!Directory.Exists(s_dazRootDir))
-            //{
-            //    //if the daz root directory is missing then all bets are off -- fail all the open scenes
-            //    //foreach (var scene in m_openScenes)
-            //    //    scene.Fail(ErrorState.NoDazRootPath);
-
-            //    Fail(ErrorState.NoDazRootPath);
-
-            //    return;
-
-            //    //string guid = AssetDatabase.CreateFolder("Assets", "Daz3D");
-            //    //dazRootDir = AssetDatabase.GUIDToAssetPath(guid);
-            //    //Debug.Log("created folder   " + s_dazRootDir);
-            //}
-
-            //TODO check to see if the daz root folder for the loaded scene(s) are dirty
-            //and refresh accordingly
-
-        }
-
-       
-
+        public static float Progress = 0;
+        private static readonly Color _themedColor = new Color(.7f, 1f, .8f);
         void Update()
         {
             Repaint();
         }
 
+        Texture headColor = null;
+        Texture logoWhite = null;
 
-
-        //todo if selection.active is non null, then refresh the thumbnail from the fbx file
-        //null the thumbnail when its null or changed
-
-
-        System.Tuple<Object, Texture> thumbnail = null;
 
         void OnGUI()
         {
             var temp = GUI.backgroundColor;
-            GUI.backgroundColor = Color.green;
+
+            GUI.backgroundColor = _themedColor;
 
             GUILayout.BeginVertical(EditorStyles.helpBox);
             GUILayout.BeginHorizontal();
 
-            var dtu = Selection.activeObject;
-            if (dtu)
+
+
+
+            if (Daz3DDTUImporter.ValidateDTUSelected())
             {
+                var dtu = Selection.activeObject;
                 var dtuPath = AssetDatabase.GetAssetPath(dtu);
+                var fbxPath = dtuPath.Replace(".dtu", ".fbx");
+
                 if (thumbnail == null || dtu != thumbnail.Item1)
                 {
-                    var fbxPath = dtuPath.Replace(".dtu", ".fbx");
                     var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
-                    thumbnail = new System.Tuple<Object, Texture>(dtu, AssetPreview.GetAssetPreview(fbx));
+                    thumbnail = new System.Tuple<UnityEngine.Object, Texture>(dtu, AssetPreview.GetAssetPreview(fbx));
                 }
 
+                GUIStyle bigStyle = new GUIStyle(GUI.skin.label);
+                bigStyle.fontSize = 24;
+                bigStyle.normal.textColor = _themedColor;
 
-                if (dtuPath.ToLower().EndsWith("dtu"))//todo more robust test?
+                //big conspicuous prompt to click
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginVertical();
+
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("Click to create prefab for " + dtu.name + " ->", bigStyle);
+                GUILayout.EndHorizontal();
+
+                //caption with full path
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("(" + dtuPath + ")");
+                GUILayout.EndHorizontal();
+
+                GUILayout.EndVertical();
+
+                //the button
+                if (GUILayout.Button(thumbnail.Item2, GUILayout.Height(100), GUILayout.Width(100)))
                 {
-                    if (GUILayout.Button(thumbnail.Item2, GUILayout.Height(100), GUILayout.Width(100)))
-                    {
-                        var dtuMaterialMap = Daz3DDTUImporter.ImportDTU(dtuPath);
-
-                        var fbxPath = dtuPath.Replace(".dtu", ".fbx");
-                        var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
-                        if (fbx && PrefabUtility.GetPrefabAssetType(fbx) == PrefabAssetType.Model)
-                        {
-                            Daz3DDTUImporter.GeneratePrefabFromFBX(fbx, dtuMaterialMap);
-                        }
-                    }
-                    GUILayout.Label(dtuPath + " is a dtu file.");
+                    Daz3DDTUImporter.Import(dtuPath, fbxPath);
                 }
 
+
+            }
+            else
+            {
+                thumbnail = null;
+                if (headColor == null)
+                    headColor = Resources.Load<Texture>("Daz_Head_Color_5K");
+                else if (logoWhite == null)
+                    logoWhite = Resources.Load<Texture>("Daz_Logo_White_4K");
+                else
+                {
+                    GUILayout.FlexibleSpace();
+                    GUILayout.Label(headColor, GUILayout.Height(100), GUILayout.Width(190));
+                    GUILayout.Label(logoWhite, GUILayout.Height(100));
+                    GUILayout.FlexibleSpace();
+
+                }
             }
 
             GUILayout.EndHorizontal();
-            //GUILayout.ProgressBar( 50f / 100f, "Computing Stuff, chill.");
-
-            GUILayout.Space(10);
-
-            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(100));
-
-            foreach (var record in Daz3DDTUImporter.EventQueue)
-            {
-                GUILayout.BeginVertical(GUI.skin.button);
-                GUILayout.BeginHorizontal();
-                GUILayout.TextField(record.Timestamp.ToString());
-                GUILayout.TextField(record.Path);
-                GUILayout.EndHorizontal();
-                GUILayout.EndVertical();
-            }
-
-            EditorGUILayout.EndScrollView();
 
             GUILayout.EndVertical();
+
+            GUIStyle myStyle = new GUIStyle(GUI.skin.label);
+            myStyle.margin = new RectOffset(0, 0, 0, 0);
+
+            var labels = new string[] { "History", "Read Me", "Options" };
+            toolbarMode = GUILayout.Toolbar(toolbarMode, labels);
+
+            switch (toolbarMode)
+            {
+                case (0):
+                    DrawHistory(myStyle);
+                    break;
+                case 1:
+                    DrawHelpReadMe();
+                    break;
+                case 2:
+                    DrawOptions();
+                    break;
+
+            }
 
             GUI.backgroundColor = temp;
 
         }
 
+        private void DrawOptions()
+        {
+            GUILayout.Label("Coming Soon...");
+        }
 
-        //public void Fail(ErrorState error)
-        //{
-        //    s_errorState = error;
-        //    Debug.LogError("Daz3DBridge fails with error code: " + s_errorState);
+        private void DrawHistory(GUIStyle myStyle)
+        {
+            if (Daz3DDTUImporter.EventQueue.Count > 0)
+            {
 
-        //}
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("*Click the ", myStyle);
+                GUI.contentColor = Color.cyan;
+                GUILayout.Label("links", myStyle);
+                GUI.contentColor = Color.white;
+                GUILayout.Label(" below to select those assets in Project window.", myStyle);
+
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+            }
+
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
+            foreach (var record in Daz3DDTUImporter.EventQueue)
+            {
+
+                GUILayout.BeginVertical(GUI.skin.box);
+                GUILayout.Label("Import Event: " + record.Timestamp);
+                GUILayout.Space(4);
+
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(16);
+
+                //foreach (var word in words)
+                foreach (var token in record.Tokens)
+                {
+                    if (token.Selectable)
+                    {
+                        GUI.contentColor = Color.cyan;
+
+                        if (GUILayout.Button(token.Text, myStyle))
+                            Selection.activeObject = token.Selectable;
+
+                        GUI.contentColor = Color.white;
+
+                    }
+                    else
+                    {
+                        GUILayout.Label(token.Text, myStyle);
+                    }
+
+                    if (token.EndLine)
+                    {
+                        GUILayout.FlexibleSpace();
+                        GUILayout.EndHorizontal();
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Space(16);
+                    }
+
+                }
+
+                GUILayout.FlexibleSpace();
+                GUILayout.EndHorizontal();
+
+
+                GUILayout.EndVertical();
+
+                GUILayout.Space(8);
+
+            }
 
 
 
 
+            EditorGUILayout.EndScrollView();
+        }
+
+        int toolbarMode = 0;
+
+        Vector2 readMePos = Vector2.zero;
+        private void DrawHelpReadMe()
+        {
+            var readMe = Resources.Load<TextAsset>("ReadMe");
+            readMePos = GUILayout.BeginScrollView(readMePos);
+            GUILayout.TextArea(readMe.text);
+            GUILayout.EndScrollView();
+        }
     }
 
 }
