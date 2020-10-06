@@ -127,11 +127,16 @@ namespace Daz3D
 
         private static bool IrayShadersReady()
         {
-            if (Shader.Find(DTU_Constants.shaderNameIrayOpaque) == null ||
-                Shader.Find(DTU_Constants.shaderNameIrayTransparent) == null ||
+            if (
+                Shader.Find(DTU_Constants.shaderNameMetal) == null ||
+                Shader.Find(DTU_Constants.shaderNameSpecular) == null ||
                 Shader.Find(DTU_Constants.shaderNameIraySkin) == null ||
-                Shader.Find(DTU_Constants.shaderNameHair) == null)
+                Shader.Find(DTU_Constants.shaderNameHair) == null ||
+                Shader.Find(DTU_Constants.shaderNameWet) == null ||
+                Shader.Find(DTU_Constants.shaderNameInvisible) == null
+            ) {
                 return false;
+            }
 
             return true;
         }
@@ -140,7 +145,7 @@ namespace Daz3D
 
         public static void ImportDTU(string path)
         {
-            Debug.LogWarning("ImportDTU for " + path + "=======================================");
+            Debug.Log("ImportDTU for " + path);
 
             ImportEventRecord record = new ImportEventRecord();
             EventQueue.Enqueue(record);
@@ -429,7 +434,8 @@ namespace Daz3D
             pfbRecord.AddToken(resultingInstance.name, resultingInstance, ENDLINE);
             EventQueue.Enqueue(pfbRecord);
 
-
+            //highlight/select the object in the scene view
+            Selection.activeGameObject = resultingInstance;
         }
 
 

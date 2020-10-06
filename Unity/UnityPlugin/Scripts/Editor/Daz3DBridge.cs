@@ -28,9 +28,20 @@ namespace Daz3D
 
         public static float Progress = 0;
         private static readonly Color _themedColor = new Color(.7f, 1f, .8f);
+
+        private bool _needsRepaint = false;
         void Update()
         {
-            Repaint();
+            if(_needsRepaint)
+            {
+                _needsRepaint = false;
+                Repaint();
+            }
+        }
+
+        void OnSelectionChange()
+        {
+            _needsRepaint = true;
         }
 
         Texture headColor = null;
