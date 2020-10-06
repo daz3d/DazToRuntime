@@ -185,6 +185,19 @@ void DzUnityAction::CreateUnityFiles(bool replace)
 		  CopyFile(&file, &shader, replace);
 		  file.close();
 	 }
+	 
+	 //Create shader helpers folder if it doesn't exist
+	 QString shaderHelperFolder = ImportFolder + "\\Shaders\\Helpers";
+	 dir.mkpath(shaderHelperFolder);
+
+	 QStringList shaderHelpers = QDir(":/ShaderHelpers/").entryList();
+	 for (int i = 0; i < shaderHelpers.size(); i++)
+	 {
+		  QString shaderHelper = shaderHelperFolder + "\\" + shaderHelpers[i];
+		  QFile file(":/ShaderHelpers/" + shaderHelpers[i]);
+		  CopyFile(&file, &shaderHelper, replace);
+		  file.close();
+	 }
 
 	 //Create vendors folder if it doesn't exist
 	 QString vendorsFolder = ImportFolder + "\\Vendors";
