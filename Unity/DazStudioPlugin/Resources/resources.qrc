@@ -42,12 +42,8 @@
 		<file alias="IrayUberSkinDiffusionProfile.asset.meta">../../UnityPlugin/DiffusionProfiles/GenericDiffusionProfile.asset.meta</file>
 	</qresource>
 	<qresource prefix="/Resources">
-		<file alias="Daz_Head_Color_5K.png">../../UnityPlugin/Resources/Daz_Head_Color_5K.png</file>
-		<file alias="Daz_Head_Color_5K.png.meta">../../UnityPlugin/Resources/Daz_Head_Color_5K.png.meta</file>
-		<file alias="Daz_Logo_Black_4K.png">../../UnityPlugin/Resources/Daz_Logo_Black_4K.png</file>
-		<file alias="Daz_Logo_Black_4K.png.meta">../../UnityPlugin/Resources/Daz_Logo_Black_4K.png.meta</file>
-		<file alias="Daz_Logo_White_4K.png">../../UnityPlugin/Resources/Daz_Logo_White_4K.png</file>
-		<file alias="Daz_Logo_White_4K.png.meta">../../UnityPlugin/Resources/Daz_Logo_White_4K.png.meta</file>
+		<file alias="Daz_Combined_Small.png">../../UnityPlugin/Resources/Daz_Combined_Small.png</file>
+		<file alias="Daz_Combined_Small.png.meta">../../UnityPlugin/Resources/Daz_Combined_Small.png.meta</file>
 		<file alias="ReadMe.txt">../../UnityPlugin/Resources/ReadMe.txt</file>
 		<file alias="ReadMe.txt.meta">../../UnityPlugin/Resources/ReadMe.txt.meta</file>
 	</qresource>

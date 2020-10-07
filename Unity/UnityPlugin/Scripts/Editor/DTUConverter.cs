@@ -43,6 +43,7 @@ namespace Daz3D
 			}
 		}
 
+		public string AssetID;
 		public string AssetName;
 		public string AssetType;
 		public string FBXFile;
@@ -130,7 +131,7 @@ namespace Daz3D
 			var assetNameLower = dtuMaterial.AssetName.ToLower();
 			var valueLower = dtuMaterial.Value.ToLower();
 
-			if(matNameLower.Contains("cornea") || matNameLower.Contains("eyemoisture"))
+			if(matNameLower.Contains("cornea") || matNameLower.Contains("eyemoisture") || matNameLower.Contains("eyereflection"))
 			{
 				return true;
 			}
@@ -167,10 +168,34 @@ namespace Daz3D
 			var dualLobeSpecularWeight = dtuMaterial.Get("Dual Lobe Specular Weight");
 			var dualLobeSpecularReflectivity = dtuMaterial.Get("Dual Lobe Specular Reflectivity");
 
+			if(dtuMaterial.MaterialType == "omUberSurface" || dtuMaterial.MaterialType == "omHumanSurface")
+			{
+				if(IsDTUMaterialWet(dtuMaterial))
+				{
+					return false;
+				}
+				if(IsDTUMaterialHair(dtuMaterial))
+				{
+					return false;
+				}
+				if(IsDTUMaterialSclera(dtuMaterial))
+				{
+					return false;
+				}
+
+				var matNameLower = dtuMaterial.MaterialName.ToLower();
+
+				if(matNameLower.Contains("iris") || matNameLower.Contains("eyelash") || matNameLower.Contains("teeth") || matNameLower.Contains("nail") || matNameLower.Contains("tongue") || matNameLower.Contains("mouth") || matNameLower.Contains("pupil"))
+				{
+					return false;
+				}
+
+				return dtuMaterial.Value == "Actor/Character" || dtuMaterial.Value == "Actor";
+			}
+
 			//TODO: this is a bit naive as people will use the dual lobe properties for non skin, but for now it's ok
 			if(
-				!string.IsNullOrEmpty(dualLobeSpecularWeight.Texture)
-				|| !string.IsNullOrEmpty(dualLobeSpecularReflectivity.Texture)
+				dualLobeSpecularWeight.TextureExists() || dualLobeSpecularReflectivity.TextureExists()
 			)
 			{
 				return true;
@@ -1029,6 +1054,13 @@ namespace Daz3D
 					shaderName = DTU_Constants.shaderNameSpecular;
 					break;
 			}
+			
+			bool isWet = IsDTUMaterialWet(dtuMaterial);
+
+			if(isWet)
+			{
+				shaderName = DTU_Constants.shaderNameWet;
+			}
 
 			var shader = Shader.Find(shaderName);
 			if(shader == null)
@@ -1051,62 +1083,87 @@ namespace Daz3D
 				mat.SetVector("_Offset",offset);
 			}
 
-			mat.SetColor("_Diffuse",diffuseColor.Color);
-			mat.SetTexture("_DiffuseMap",ImportTextureFromPath(diffuseColor.Texture,materialDir,record));
 
-			//glossiness seems to have no real effect, so we'll just set everything to being rough
-			mat.SetFloat("_Roughness",1.0f);
+			bool isTransparent = opacityStrength.TextureExists() || opacityStrength.Float < 1.0f;
 
-			mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir, record, true));
-			mat.SetFloat("_NormalStrength",normalMap.Float);
-			mat.SetFloat("_Height",bumpStrength.Float);
-			mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false, true));
-			mat.SetFloat("_HeightOffset",0.25f);
-			mat.SetTexture("_AlphaMap",ImportTextureFromPath(opacityStrength.Texture,materialDir, record, false, true));
-
-			if(shaderLightingModel != DTULightingModel.Matte)
+			if (isWet)
 			{
-				var specularColorValue = specularColor.Color;
-				specularColorValue = Color.Lerp(Color.black,specularColorValue,specularStrength.Float);
-				mat.SetColor("_SpecularColor",specularColorValue);
-				mat.SetTexture("_SpecularColorMap",ImportTextureFromPath(specularColor.Texture,materialDir, record));
 
-				mat.SetFloat("_SpecularStrength",specularStrength.Float);
-				mat.SetTexture("_SpecularStrengthMap",ImportTextureFromPath(specularStrength.Texture,materialDir,record,false,true));
+				isTransparent = true;
+
+				mat.SetFloat("_Alpha", 0f);
+				mat.SetFloat("_Coat",0.25f);
+				mat.SetFloat("_IndexOfRefraction",indexOfRefraction.Float);
+				//TODO: we can pull data from the existing object, but for now these values work well
+				mat.SetFloat("_Smoothness",0.97f);
+				mat.SetFloat("_Normal",normalMap.Float);
+				mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir, record, true));
+				mat.SetFloat("_Height",bumpStrength.Float);
+				mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false,true));
+				mat.SetFloat("_HeightOffset",0.25f);
 			}
-
-			//mat.SetTexture("_AmbientOcclusionMap",ImportTextureFromPath(ambientColor.Texture,materialDir,record, false, true));
-
-			if(shaderLightingModel == DTULightingModel.Skin)
+			else
 			{
-				//Sheen, Scatter, Thickness
-				mat.SetTexture("_ThicknessMap",ImportTextureFromPath(thickness.Texture,materialDir,record,false,true));
-			}
 
 
-			if(mat.HasProperty("_Emission"))
-			{
-				var emissionColorValue = ambientColor.Color;
+				mat.SetColor("_Diffuse",diffuseColor.Color);
+				mat.SetTexture("_DiffuseMap",ImportTextureFromPath(diffuseColor.Texture,materialDir,record));
 
-				mat.SetTexture("_EmissionMap",ImportTextureFromPath(ambientColor.Texture,materialDir,record));
+				//glossiness seems to have no real effect, so we'll just set everything to being rough
+				mat.SetFloat("_Roughness",1.0f);
 
-				if(mat.HasProperty("_EmissionStrength"))
+				mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir, record, true));
+				mat.SetFloat("_NormalStrength",normalMap.Float);
+				mat.SetFloat("_Height",bumpStrength.Float);
+				mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false, true));
+				mat.SetFloat("_HeightOffset",0.25f);
+				mat.SetTexture("_AlphaMap",ImportTextureFromPath(opacityStrength.Texture,materialDir, record, false, true));
+				mat.SetFloat("_Alpha",opacityStrength.Float);
+
+				if(shaderLightingModel != DTULightingModel.Matte)
 				{
-					//if we support strength feed it directly
-					mat.SetFloat("_EmissionStrength",ambientStrength.Float);
-					mat.SetFloat("_EmissionExposureWeight",0.0f); //hardcoded
+					var specularColorValue = specularColor.Color;
+					specularColorValue = Color.Lerp(Color.black,specularColorValue,specularStrength.Float);
+					mat.SetColor("_SpecularColor",specularColorValue);
+					mat.SetTexture("_SpecularColorMap",ImportTextureFromPath(specularColor.Texture,materialDir, record));
 
-					if(mat.HasProperty("_EmissionStrengthMap"))
+					mat.SetFloat("_SpecularStrength",specularStrength.Float);
+					mat.SetTexture("_SpecularStrengthMap",ImportTextureFromPath(specularStrength.Texture,materialDir,record,false,true));
+				}
+
+				//mat.SetTexture("_AmbientOcclusionMap",ImportTextureFromPath(ambientColor.Texture,materialDir,record, false, true));
+
+				if(shaderLightingModel == DTULightingModel.Skin)
+				{
+					//Sheen, Scatter, Thickness
+					mat.SetTexture("_ThicknessMap",ImportTextureFromPath(thickness.Texture,materialDir,record,false,true));
+				}
+
+
+				if(mat.HasProperty("_Emission"))
+				{
+					var emissionColorValue = ambientColor.Color;
+
+					mat.SetTexture("_EmissionMap",ImportTextureFromPath(ambientColor.Texture,materialDir,record));
+
+					if(mat.HasProperty("_EmissionStrength"))
 					{
-						mat.SetTexture("_EmissionStrengthMap",ImportTextureFromPath(ambientStrength.Texture,materialDir,record,false,true));
+						//if we support strength feed it directly
+						mat.SetFloat("_EmissionStrength",ambientStrength.Float);
+						mat.SetFloat("_EmissionExposureWeight",0.0f); //hardcoded
+
+						if(mat.HasProperty("_EmissionStrengthMap"))
+						{
+							mat.SetTexture("_EmissionStrengthMap",ImportTextureFromPath(ambientStrength.Texture,materialDir,record,false,true));
+						}
 					}
+					else
+					{
+						//if we don't multiply it into the base emission color (not quite right, but it's close enough), this means the maps will be wrong if used, but the color will be right
+						emissionColorValue *= ambientStrength.Float;
+					}
+					mat.SetColor("_Emission",emissionColorValue);
 				}
-				else
-				{
-					//if we don't multiply it into the base emission color (not quite right, but it's close enough), this means the maps will be wrong if used, but the color will be right
-					emissionColorValue *= ambientStrength.Float;
-				}
-				mat.SetColor("_Emission",emissionColorValue);
 			}
 
 
@@ -1117,7 +1174,6 @@ namespace Daz3D
 			var valueLower = dtuMaterial.Value.ToLower();
 			bool isDoubleSided = shaderLightingModel != DTULightingModel.Skin;
 			bool isTranslucent = shaderLightingModel != DTULightingModel.Skin;
-			bool isTransparent = opacityStrength.TextureExists();
 
 			bool hasDualLobeSpecularWeight = false;
 			bool hasDualLobeSpecularReflectivity = false;
@@ -1235,6 +1291,272 @@ namespace Daz3D
 
 			return mat;
 		}
+
+
+		/// <summary>
+		/// Converts a material using the omUberSurface shader type
+		/// </summary>
+		/// <param name="dTUMaterial"></param>
+		/// <returns></returns>
+		public Material ConvertToUnityOmUberSurface(DTUMaterial dtuMaterial, string materialDir)
+		{
+
+			var diffuseColor = dtuMaterial.Get("Diffuse Color");
+			var opacityStrength = dtuMaterial.Get("Opacity Strength");
+			var bumpActive = dtuMaterial.Get("Bump Active");
+			var bumpStrength = dtuMaterial.Get("Bump Strength");
+			var bumpMinimum = dtuMaterial.Get("Bump Minimum");
+			var bumpMaximum = dtuMaterial.Get("Bump Maximum");
+			var displacementActive = dtuMaterial.Get("Displacement Active");
+			var displacementMinimum = dtuMaterial.Get("Displacement Minimum");
+			var displacementMaximum = dtuMaterial.Get("Displacement Maximum");
+			var traceDisplacements = dtuMaterial.Get("Trace Displacements");
+			var normalMap = dtuMaterial.Get("Normal Map");
+			var diffuseActive = dtuMaterial.Get("Diffuse Active");
+			var diffuseStrength = dtuMaterial.Get("Diffuse Strength");
+			var diffuseRoughness = dtuMaterial.Get("Diffuse Roughness");
+			var opacityActive = dtuMaterial.Get("Opacity Active");
+			var opacityColor = dtuMaterial.Get("Opacity Color");
+			var specularActive = dtuMaterial.Get("Specular Active");
+			var specularColor = dtuMaterial.Get("Specular Color");
+			var specularStrength = dtuMaterial.Get("Specular Strength");
+			var glossiness = dtuMaterial.Get("Glossiness");
+			var specularSharpness = dtuMaterial.Get("Specular Sharpness");
+			var anisotropicActive = dtuMaterial.Get("Anisotropic Active");
+			var anisotropicDirection = dtuMaterial.Get("Anisotropic Direction");
+			var specular2Active = dtuMaterial.Get("Specular2 Active");
+			var specular2Color = dtuMaterial.Get("Specular2 Color");
+			var specular2Strength = dtuMaterial.Get("Specular2 Strength");
+			var specular2Roughness = dtuMaterial.Get("Specular2 Roughness");
+			var specular2Sharpness = dtuMaterial.Get("Specular2 Sharpness");
+			var anisotropic2Active = dtuMaterial.Get("Anisotropic2 Active");
+			var anisotropic2Direction = dtuMaterial.Get("Anisotropic2 Direction");
+			var multiplySpecularThroughOpacity = dtuMaterial.Get("Multiply Specular Through Opacity");
+			var amibentActive = dtuMaterial.Get("Ambient Active");
+			var ambientColor = dtuMaterial.Get("Ambient Color");
+			var ambientStrength = dtuMaterial.Get("Ambient Strength");
+			var refractionActive = dtuMaterial.Get("Refraction Active");
+			var indexOfRefraction = dtuMaterial.Get("Index of Refraction");
+			var reflectionActive = dtuMaterial.Get("Reflection Active");
+			var reflectionMode = dtuMaterial.Get("Reflection Mode");
+			var reflectionEnvironmentMap = dtuMaterial.Get("Reflection Environment Map (Map in Lat/Long format)");
+			var reflectionColor = dtuMaterial.Get("Reflection Color");
+			var reflectionStrength = dtuMaterial.Get("Reflection Strength");
+			var reflectionBlur = dtuMaterial.Get("Reflection Blur");
+			var reflectionBlurSamples = dtuMaterial.Get("Reflection Blur Samples");
+			var multiplyReflectionThroughOpacity = dtuMaterial.Get("Multiply Reflection Through Opacity");
+			var fresnelActive = dtuMaterial.Get("Fresnel Active");
+			var fresnelStrength = dtuMaterial.Get("Fresnel Strength");
+			var fresnelFalloff = dtuMaterial.Get("Fresnel Falloff");
+			var fresneslSharpness = dtuMaterial.Get("Fresnel Sharpness");
+			var velvetActive = dtuMaterial.Get("Velvet Active");
+			var velvetColor = dtuMaterial.Get("Velvet Color");
+			var velvetStrength = dtuMaterial.Get("Velvet Strength");
+			var velvetFalloff = dtuMaterial.Get("Velvet Falloff");
+			var subsurfaceActive = dtuMaterial.Get("Subsurface Active");
+			var subsurfaceStrength = dtuMaterial.Get("Subsurface Strength");
+			var subsurfaceColor = dtuMaterial.Get("Subsurface Color");
+			var subsurfaceRefraction = dtuMaterial.Get("Subsurface Refraction");
+			var subsurfaceScale = dtuMaterial.Get("Subsurface Scale");
+			var subsurfaceGroup = dtuMaterial.Get("Subsurface Group");
+			var subsurfaceShadingRate = dtuMaterial.Get("Subsurface Shading Rate");
+			var translucencyActive = dtuMaterial.Get("Translucency Active");
+			var translucencyColor = dtuMaterial.Get("Translucency Color");
+			var translucencyStrength = dtuMaterial.Get("Translucency Strength");
+			var fantom = dtuMaterial.Get("Fantom");
+			var raytrace = dtuMaterial.Get("Raytrace");
+			var acceptShadows = dtuMaterial.Get("Accept Shadows");
+			var occlusion = dtuMaterial.Get("Occlusion");
+			var occlusionShadingRateMode = dtuMaterial.Get("Occlusion Shading Rate Mode");
+			
+			var horizontalTile = dtuMaterial.Get("Horizontal Tiles");
+			//var horizontalTile = dtuMaterial.Get("Map Tiling U");
+			//var horizontalOffset = dtuMaterial.Get("Horizontal Offset");
+			//var verticalTile = dtuMaterial.Get("Vertical Tiles");
+			var verticalTile = dtuMaterial.Get("Map Tiling V");
+			//var verticalOffset = dtuMaterial.Get("Vertical Offset");
+			var uvSet = dtuMaterial.Get("UV Set");
+
+
+
+
+
+			bool isHair = IsDTUMaterialHair(dtuMaterial);
+			bool isSkin = IsDTUMaterialSkin(dtuMaterial);
+			bool isWet = IsDTUMaterialWet(dtuMaterial);
+			bool isSclera = IsDTUMaterialSclera(dtuMaterial);
+
+			var matNameLower = dtuMaterial.MaterialName.ToLower();
+			var assetNameLower = dtuMaterial.AssetName.ToLower();
+			var valueLower = dtuMaterial.Value.ToLower();
+			bool isDoubleSided = true;
+			bool isTranslucent = false;
+			bool isTransparent = opacityActive.Float > 0f && opacityStrength.TextureExists();
+			bool isSpecular = true;
+
+
+			//this shader uses specular workflow, so we'll match with it
+			var shaderName = DTU_Constants.shaderNameSpecular;
+
+
+			if(isHair)
+			{
+				shaderName = DTU_Constants.shaderNameHair;
+			}
+			else if(isSkin)
+			{
+				shaderName = DTU_Constants.shaderNameIraySkin;
+				isDoubleSided = false;
+				isTransparent = false;
+				isTranslucent = true;
+			}
+			else if(isWet)
+			{
+				shaderName = DTU_Constants.shaderNameWet;
+			}
+
+			var shader = Shader.Find(shaderName);
+			if(shader == null)
+			{
+				UnityEngine.Debug.LogError("Failed to locate shader: " + shaderName + " for mat: " + dtuMaterial.MaterialName);
+				return null;
+			}
+			var mat = new Material(shader);
+			
+			var record = new Daz3DDTUImporter.ImportEventRecord();
+			if(horizontalTile.Exists && mat.HasProperty("_Tiling"))
+			{
+				var tiling = new Vector2(horizontalTile.Float,verticalTile.Float);
+				mat.SetVector("_Tiling",tiling);
+			}
+			//if(horizontalOffset.Exists && mat.HasProperty("_Offset"))
+			//{
+			//	var offset = new Vector2(horizontalOffset.Float,verticalOffset.Float);
+			//	mat.SetVector("_Offset",offset);
+			//}
+
+
+
+			//TODO: opacityColor defines the "opaque" value, in most cases I've seen it's white which is what we'd expect with most maps, but we need to add support for this at some point
+			
+
+			//TODO: we handle this nearly the same as iray uber, these switches should be combined instead and have the same logic applied
+
+			if(isSclera)
+			{
+				//scleras are a little dark on our side, so we'll brighten them up
+				mat.SetFloat("_DiffuseMultiplier",2.5f);
+			}
+
+			if (isHair)
+			{
+				//Hairs are pretty simple b/c we only care about a few properties, so we're forking here to deal with it
+				isDoubleSided = true;
+				isTransparent = true;
+
+				mat.SetColor("_Diffuse",diffuseColor.Color);
+				mat.SetTexture("_DiffuseMap",ImportTextureFromPath(diffuseColor.Texture,materialDir, record));
+				mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir, record, true));
+				mat.SetFloat("_NormalStrength",normalMap.Float);
+				mat.SetFloat("_Height",bumpStrength.Float);
+				mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false, true));
+				mat.SetFloat("_HeightOffset",0.25f);
+				mat.SetTexture("_CutoutOpacityMap",ImportTextureFromPath(opacityStrength.Texture,materialDir, record, false, true));
+
+				mat.SetTexture("_GlossyRoughnessMap",ImportTextureFromPath(glossiness.Texture,materialDir, record, false, true));
+				mat.SetFloat("_GlossyRoughness",glossiness.Float);
+
+				mat.SetColor("_SpecularColor",specularColor.Color);
+
+				//A few magic values that work for most hairs
+				mat.SetFloat("_AlphaStrength",1.5f);
+				mat.SetFloat("_AlphaOffset",0.35f);
+				mat.SetFloat("_AlphaClip",0.75f);
+				mat.SetFloat("_AlphaPower",0.4f);
+			}
+			else if(isWet)
+			{
+				isDoubleSided = false;
+				isTransparent = true;
+
+				mat.SetFloat("_Alpha", 0f);
+				mat.SetFloat("_Coat",0.25f);
+				mat.SetFloat("_IndexOfRefraction",indexOfRefraction.Float);
+				//TODO: we can pull data from the existing object, but for now these values work well
+				mat.SetFloat("_Smoothness",0.97f);
+				mat.SetFloat("_Normal",normalMap.Float);
+				mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir, record, true));
+				mat.SetFloat("_Height",bumpStrength.Float);
+				mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false,true));
+				mat.SetFloat("_HeightOffset",0.25f);
+			}
+			else 
+			{
+				mat.SetColor("_Diffuse",diffuseColor.Color);
+				mat.SetTexture("_DiffuseMap",ImportTextureFromPath(diffuseColor.Texture,materialDir, record));
+				
+				if(opacityActive.Float > 0f)
+				{
+					mat.SetFloat("_Alpha",opacityStrength.Float);
+					mat.SetTexture("_AlphaMap",ImportTextureFromPath(opacityStrength.Texture,materialDir, record, false, true));
+				}
+				mat.SetTexture("_GlossyRoughnessMap",ImportTextureFromPath(glossiness.Texture,materialDir, record, false, true));
+				mat.SetFloat("_GlossyRoughness",glossiness.Float);
+
+
+				mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir, record, true));
+				mat.SetFloat("_Normal",normalMap.Float);
+
+				if(bumpActive.Float > 0f)
+				{
+					mat.SetFloat("_Height",bumpStrength.Float);
+					mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false, true));
+					mat.SetFloat("_HeightOffset",0.25f);
+				}
+
+				if(specularActive.Float> 0f)
+				{
+					mat.SetColor("_SpecularColor",specularColor.Color);
+					mat.SetTexture("_SpecularColorMap",ImportTextureFromPath(specularColor.Texture,materialDir,record));
+
+					mat.SetFloat("_SpecularStrength",specularStrength.Float);
+					mat.SetTexture("_SpecularStrengthMap",ImportTextureFromPath(specularStrength.Texture,materialDir,record,false,true));
+				}
+
+				if(amibentActive.Float > 0f)
+				{
+					mat.SetColor("_Emission",ambientColor.Color);
+					mat.SetTexture("_EmissionMap",ImportTextureFromPath(ambientColor.Texture,materialDir,record));
+					mat.SetFloat("_EmissionStrength",ambientStrength.Float);
+					mat.SetTexture("_EmissionStrengthMap",ImportTextureFromPath(ambientStrength.Texture,materialDir,record,false,true));
+					mat.SetFloat("_EmissionExposureWeight",0.0f); //hardcoded
+				}
+
+				mat.SetTexture("_AmbientOcclusionMap",ImportTextureFromPath(occlusion.Texture,materialDir,record,false,true));
+			}
+
+
+			bool hasDualLobeSpecularWeight = false;
+			bool hasDualLobeSpecularReflectivity = false;
+			bool hasGlossyLayeredWeight = false;
+			bool hasGlossyColor = false;
+			int sortingPriority = 0;
+
+			ToggleCommonMaterialProperties(ref mat,matNameLower,isTransparent,isDoubleSided, hasDualLobeSpecularWeight, hasDualLobeSpecularReflectivity,sortingPriority,hasGlossyLayeredWeight,hasGlossyColor);
+
+
+			//omUberSurface is a glossiness/smoothness shader, not roughness, so we need to flip
+			mat.EnableKeyword("ROUGHNESS_IS_SMOOTHNESS_ON");
+
+			if (record.Tokens.Count > 0)
+			{
+				Daz3DDTUImporter.EventQueue.Enqueue(record);
+			}
+
+
+			return mat;
+
+		}
 		
 
 		/// <summary>
@@ -1282,12 +1604,9 @@ namespace Daz3D
 			{
 				materialType = DTUMaterialType.DazStudioDefault;
 			}
-			else if(dtuMaterial.MaterialType == "omUberSurface")
+			else if(dtuMaterial.MaterialType == "omUberSurface" || dtuMaterial.MaterialType == "omHumanSurface")
 			{
 				materialType = DTUMaterialType.OmUberSurface;
-				
-				//TODO: for now we're going to force this to Daz Studio Default which has similar handling
-				materialType = DTUMaterialType.DazStudioDefault;
 			}
 			else
 			{
@@ -1320,6 +1639,14 @@ namespace Daz3D
 			} else if(materialType == DTUMaterialType.PBRSP)
 			{
 				var pbrspMat = ConvertToUnityPBRSP(dtuMaterial,materialDir);
+				if(pbrspMat != null)
+				{
+					SaveMaterialAsAsset(pbrspMat,materialPath);
+					return pbrspMat;
+				}
+			} else if(materialType == DTUMaterialType.OmUberSurface)
+			{
+				var pbrspMat = ConvertToUnityOmUberSurface(dtuMaterial,materialDir);
 				if(pbrspMat != null)
 				{
 					SaveMaterialAsAsset(pbrspMat,materialPath);
@@ -1602,6 +1929,7 @@ namespace Daz3D
 
 			var root = SimpleJSON.JSON.Parse(text);
 
+			dtu.AssetID = root["Asset Id"].Value;
 			dtu.AssetName = root["Asset Name"].Value;
 			dtu.AssetType = root["Asset Type"].Value;
 			dtu.FBXFile = root["FBX File"].Value;
