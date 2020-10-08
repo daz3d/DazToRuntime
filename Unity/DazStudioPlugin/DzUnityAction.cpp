@@ -224,6 +224,19 @@ void DzUnityAction::CreateUnityFiles(bool replace)
 		  CopyFile(&file, &profile, replace);
 		  file.close();
 	 }
+	 
+	 //Create Resources folder if it doesn't exist
+	 QString resourcesFolder = ImportFolder + "\\Resources";
+	 dir.mkpath(resourcesFolder);
+
+	 QStringList resources = QDir(":/Resources/").entryList();
+	 for (int i = 0; i < resources.size(); i++)
+	 {
+		  QString resource = resourcesFolder + "\\" + resources[i];
+		  QFile file(":/Resources/" + resources[i]);
+		  CopyFile(&file, &resource, replace);
+		  file.close();
+	 }
 }
 
 void DzUnityAction::WriteConfiguration()

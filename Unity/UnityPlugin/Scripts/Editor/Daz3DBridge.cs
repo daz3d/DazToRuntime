@@ -284,9 +284,15 @@ namespace Daz3D
         private void DrawHelpReadMe()
         {
             var readMe = Resources.Load<TextAsset>("ReadMe");
-            readMePos = GUILayout.BeginScrollView(readMePos);
-            GUILayout.TextArea(readMe.text);
-            GUILayout.EndScrollView();
+            if (readMe)
+            {
+                readMePos = GUILayout.BeginScrollView(readMePos);
+                GUILayout.TextArea(readMe.text);
+                GUILayout.EndScrollView();
+            }
+            else
+                GUILayout.Label("ReadMe text not loaded");
+
         }
     }
 
@@ -302,14 +308,22 @@ namespace Daz3D
         }
         private static void DrawAssetDetails(string guid, Rect rect)
         {
-            if (Application.isPlaying || Event.current.type != EventType.Repaint || !IsMainListAsset(rect))
+            if (Application.isPlaying || Event.current.type != EventType.Repaint )
                 return;
 
             var assetPath = AssetDatabase.GUIDToAssetPath(guid);
             if (!assetPath.ToLower().EndsWith(".dtu"))
                 return;
 
-            rect.x += 5;
+
+            if (IsMainListAsset(rect))
+                rect.x += 5;
+            else
+            {
+                rect.x += 32;
+                rect.y -= 12;
+            }
+
             //rect.width = rect.height;
 
 

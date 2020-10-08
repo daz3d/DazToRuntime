@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Daz3D
 {
@@ -370,7 +371,13 @@ namespace Daz3D
                 return;
             }
 
-            // TODO update progress graph
+           
+
+            System.Reflection.MethodInfo resetPose = null;
+            System.Reflection.MethodInfo xferPose = null;
+
+            var avatarInstance = Instantiate(fbxPrefab);
+            avatarInstance.name = "AvatarInstance";
 
             if (AutomateMecanimAvatarMappings)
             { 
@@ -385,8 +392,67 @@ namespace Daz3D
                     importer.humanDescription = description;
                     importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
 
+                    // Genesis 8 is modeled in A-pose, so we correct to T-pose before configuring avatar joints
+                    //using Unity's internal MakePoseValid method, which does a perfect job
+                    if (platform == DazFigurePlatform.Genesis8 && false)
+                    {
+                        //use reflection to access AvatarSetupTool;
+                        var setupToolType = Type.GetType("UnityEditor.AvatarSetupTool,UnityEditor.dll");
+                        var boneWrapperType = Type.GetType("UnityEditor.AvatarSetupTool+BoneWrapper,UnityEditor.dll");
+
+                        if (boneWrapperType != null && setupToolType != null)
+                        {
+                            var existingMappings = new Dictionary<string, string>();
+                            var human = description.human;
+
+                            for (var i = 0; i < human.Length; ++i)
+                                existingMappings[human[i].humanName] = human[i].boneName;
+
+                            var getModelBones = setupToolType.GetMethod("GetModelBones");
+                            var getHumanBones = setupToolType.GetMethod("GetHumanBones", new[] { typeof(Dictionary<string, string>), typeof(Dictionary<Transform, bool>) });
+                            var makePoseValid = setupToolType.GetMethod("MakePoseValid");
+                            resetPose = setupToolType.GetMethod("CopyPose");
+                            xferPose = setupToolType.GetMethod("TransferPoseToDescription");
+
+                            if (getModelBones != null && getHumanBones != null && makePoseValid != null)
+                            { 
+                                record.AddToken("Corrected Avatar Setup T-pose for Genesis8 figure: ", null);
+                                record.AddToken(fbxPrefab.name, fbxPrefab, ENDLINE);
+
+                                var modelBones = (Dictionary<Transform, bool>)getModelBones.Invoke(null, new object[] { avatarInstance.transform, false, null });
+                                var humanBones = (ICollection<object>)getHumanBones.Invoke(null, new object[] { existingMappings, modelBones });
+
+                                // a little dance to populate array of Unity's internal BoneWrapper type 
+                                var humanBonesArray = new object[humanBones.Count];
+                                humanBones.CopyTo(humanBonesArray, 0);
+                                Array destinationArray = Array.CreateInstance(boneWrapperType, humanBones.Count);
+                                Array.Copy(humanBonesArray, destinationArray, humanBones.Count);
+
+                                //This mutates the transforms (modelBones) via Bonewrapper class
+                                makePoseValid.Invoke(null, new[] { destinationArray });
+                            }
+                        }
+                    }
+
                     AssetDatabase.WriteImportSettingsIfDirty(fbxPath);
                     AssetDatabase.ImportAsset(fbxPath, ImportAssetOptions.ForceUpdate);
+
+
+                    // i think this might unT-pose the gen8 skeleton instance
+                    if (resetPose != null && xferPose != null)
+                    {
+                        SerializedObject modelImporterObj = new SerializedObject(importer);
+                        var skeleton = modelImporterObj?.FindProperty("m_HumanDescription.m_Skeleton");
+
+                        if (skeleton != null)
+                        {
+                            resetPose.Invoke(null, new object[] { avatarInstance, fbxPrefab });
+                            //xferPose.Invoke(null, new object[] { skeleton, avatarInstance.transform });
+                        }
+
+                    }
+
+                    DestroyImmediate(avatarInstance);
 
                     record.AddToken("Automated Mecanim avatar setup for " + fbxPrefab.name + ": ");
 
@@ -395,29 +461,20 @@ namespace Daz3D
                     var avatar = Array.Find(allAvatars, element => element.name.StartsWith(fbxPrefab.name));
                     if (avatar)
                         record.AddToken(avatar.name, avatar, ENDLINE);
-
                 }
                 else
                 {
                     Debug.LogWarning("Could not acquire importer for " + fbxPath + " ...could not automatically configure humanoid avatar.");
                     record.AddToken("Could not acquire importer for " + fbxPath + " ...could not automatically configure humanoid avatar.", null, ENDLINE);
-
                 }
 
-                //TODO update progress graph
                 EventQueue.Enqueue(record);
             }
 
+
+            //remap the materials
             var workingInstance = Instantiate(fbxPrefab);
-
-            if (workingInstance == null)
-            {
-                Debug.LogWarning("failed to instatiate model prefab into scene");
-                return;
-            }
-
             workingInstance.name = "Daz3d_" + fbxPrefab.name;
-            //Debug.Log("about to do surgery on " + instance.name);
 
             var renderers = workingInstance.GetComponentsInChildren<Renderer>();
             if (renderers?.Length == 0)
