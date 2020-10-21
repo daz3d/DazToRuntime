@@ -32,7 +32,8 @@ public class DazToUnreal : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-            "EditorScriptingUtilities",
+				"EditorScriptingUtilities",
+				"DeveloperSettings",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
