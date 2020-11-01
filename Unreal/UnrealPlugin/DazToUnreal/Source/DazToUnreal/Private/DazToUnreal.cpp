@@ -540,11 +540,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 }
 
 	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
-	 //if (AssetType == DazAssetType::SkeletalMesh && RootBone)
-	 //{
-	 //	FDazToUnrealFbx::FixBoneRotations(RootBone);
-	 //	FDazToUnrealFbx::FixBindPose(Scene, RootBone);
-	 //}
+	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
+	 {
+		FDazToUnrealFbx::FixClusterTranformLinks(Scene, RootBone);
+	 }
 
 	 // If this is a skeleton mesh, but a root bone wasn't found, it may be a scene under a group node or something similar
 	 // So create a root node.

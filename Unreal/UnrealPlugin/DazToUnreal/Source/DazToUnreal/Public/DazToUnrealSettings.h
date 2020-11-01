@@ -21,6 +21,7 @@ public:
 		AnimationImportDirectory.Path = TEXT("/Game/DazToUnreal/Animation");
 		ShowFBXImportDialog = false;
 		FrameZeroIsReferencePose = false;
+		FixBoneRotationsOnImport = false;
 		Genesis1Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis1BaseSkeleton.Genesis1BaseSkeleton"));
 		Genesis3Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton"));
 		Genesis8Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton"));
@@ -101,6 +102,10 @@ public:
 	/** Set the default pose for the character to match frame 0 */
 	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
 		bool FrameZeroIsReferencePose;
+
+	/** Updates the bones to use a locale rotation.  This currently breaks animations coming from Daz Studio. */
+	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
+		bool FixBoneRotationsOnImport;
 
 	/** Skeleton to use for Genesis 1 characters */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings, meta = (AllowedClasses = "Skeleton"))

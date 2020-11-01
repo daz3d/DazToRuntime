@@ -35,63 +35,77 @@ void FDazToUnrealFbx::RenameDuplicateBones(FbxNode* RootNode, TMap<FString, int>
 	}
 }
 
-void FDazToUnrealFbx::FixBoneRotations(FbxNode* RootNode)
+void FDazToUnrealFbx::FixClusterTranformLinks(FbxScene* Scene, FbxNode* RootNode)
 {
-	if (RootNode == nullptr) return;
+	FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(RootNode->GetMesh());
 
+	// Create missing weights
+	if (NodeGeometry)
+	{
 
-	RootNode->LclRotation.Set(RootNode->PostRotation.Get());
+		for (int DeformerIndex = 0; DeformerIndex < NodeGeometry->GetDeformerCount(); ++DeformerIndex)
+		{
+			FbxSkin* Skin = static_cast<FbxSkin*>(NodeGeometry->GetDeformer(DeformerIndex));
+			if (Skin)
+			{
+				for (int ClusterIndex = 0; ClusterIndex < Skin->GetClusterCount(); ++ClusterIndex)
+				{
+					// Get the current tranform
+					FbxAMatrix Matrix;
+					FbxCluster* Cluster = Skin->GetCluster(ClusterIndex);
+					Cluster->GetTransformLinkMatrix(Matrix);
 
+					// Update the rotation
+					FbxDouble3 Rotation = Cluster->GetLink()->PostRotation.Get();
+					Matrix.SetR(Rotation);
+					Cluster->SetTransformLinkMatrix(Matrix);
+				}
+			}
+		}
+	}
 
 	for (int ChildIndex = 0; ChildIndex < RootNode->GetChildCount(); ++ChildIndex)
 	{
-		FbxNode * ChildNode = RootNode->GetChild(ChildIndex);
-		FixBoneRotations(ChildNode);
+		FbxNode* ChildNode = RootNode->GetChild(ChildIndex);
+		FixClusterTranformLinks(Scene, ChildNode);
 	}
 }
 
-void FDazToUnrealFbx::FixBindPose(FbxScene* Scene, FbxNode* RootNode)
+void FDazToUnrealFbx::AddWeightsToAllNodes(FbxNode* Parent)
 {
-	if (RootNode == nullptr) return;
-
-	for (int PoseIndex = 0; PoseIndex < Scene->GetPoseCount(); PoseIndex++)
+	//for (int ChildIndex = Parent->GetChildCount() - 1; ChildIndex >= 0; --ChildIndex)
 	{
-		FbxPose* Pose = Scene->GetPose(PoseIndex);
-		int PoseNodeIndex = Pose->Find(RootNode);
-		if (PoseNodeIndex != -1)
+		FbxNode* ChildNode = Parent;//Parent->GetChild(ChildIndex);
+		//RootBone->AddChild(ChildNode);
+		FString ChildName = UTF8_TO_TCHAR(ChildNode->GetName());
+		UE_LOG(LogTemp, Warning, TEXT("ChildNode %s Checking Weights"), *ChildName);
+
+		if (FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(ChildNode->GetMesh()))
 		{
-			FbxMatrix Matrix = Pose->GetMatrix(PoseNodeIndex);
-
-			FbxVector4 TargetPosition;
-			FbxVector4 TargetRotation;
-			FbxVector4 TargetShearing;
-			FbxVector4 TargetScale;
-			double Sign;
-			Matrix.GetElements(TargetPosition, TargetRotation, TargetShearing, TargetScale, Sign);
-
-			FbxDouble3 Rotation = RootNode->PostRotation.Get();
-
-			TargetRotation.Set(Rotation[0], Rotation[1], Rotation[2]);
-			Matrix.SetTRS(TargetPosition, TargetRotation, TargetScale);
-
-			Pose->Remove(PoseNodeIndex);
-			Pose->Add(RootNode, Matrix, true);
-		}
-		/*for (int PoseNodeIndex = 0; PoseNodeIndex < Pose->GetCount(); PoseNodeIndex++)
-		{
-			FbxNode* PoseNode = Pose->GetNode(PoseIndex);
-			if (PoseNode == RootNode)
+			UE_LOG(LogTemp, Warning, TEXT("  No Deformers"), *ChildName);
+			if (NodeGeometry->GetDeformerCount() == 0)
 			{
+				FbxCluster* Cluster = FbxCluster::Create(Parent->GetScene(), "");
+				Cluster->SetLink(Parent);
+				Cluster->SetLinkMode(FbxCluster::eTotalOne);
 
+				FbxSkin* Skin = FbxSkin::Create(Parent->GetScene(), "");
+				Skin->AddCluster(Cluster);
+				NodeGeometry->AddDeformer(Skin);
+
+				for (int PolygonIndex = 0; PolygonIndex < ChildNode->GetMesh()->GetPolygonCount(); ++PolygonIndex)
+				{
+					for (int VertexIndex = 0; VertexIndex < ChildNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
+					{
+						int Vertex = ChildNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
+						Cluster->AddControlPointIndex(Vertex, 1.0f);
+					}
+				}
 			}
-		}*/
+		}
+
+		//AddWeightsToAllNodes(ChildNode);
 	}
-	//RootNode->LclRotation.Set(RootNode->PostRotation.Get());
 
 
-	for (int ChildIndex = 0; ChildIndex < RootNode->GetChildCount(); ++ChildIndex)
-	{
-		FbxNode * ChildNode = RootNode->GetChild(ChildIndex);
-		FixBindPose(Scene, ChildNode);
-	}
 }
