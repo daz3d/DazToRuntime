@@ -65,6 +65,7 @@ namespace Daz3D
 			PBRSP,
 			DazStudioDefault,
 			OmUberSurface,
+			OOTHairblendingHair,
 		}
 
 		/// <summary>
@@ -1003,6 +1004,11 @@ namespace Daz3D
 			var uvSet = dtuMaterial.Get("UV Set");
 
 
+
+			//Fallback properties (not in the Daz Studio Default)
+			var cutoutOpacity = dtuMaterial.Get("Cutout Opacity");
+
+
 			/**
 			Plastic, Metallic, GlossyPlastic, GLossyMetallic uses all but
 				Sheen Color
@@ -1084,7 +1090,7 @@ namespace Daz3D
 			}
 
 
-			bool isTransparent = opacityStrength.TextureExists() || opacityStrength.Float < 1.0f;
+			bool isTransparent = opacityStrength.TextureExists() || opacityStrength.Float < 1.0f || (cutoutOpacity.Exists && cutoutOpacity.TextureExists());
 
 			if (isWet)
 			{
@@ -1119,6 +1125,7 @@ namespace Daz3D
 				mat.SetFloat("_HeightOffset",0.25f);
 				mat.SetTexture("_AlphaMap",ImportTextureFromPath(opacityStrength.Texture,materialDir, record, false, true));
 				mat.SetFloat("_Alpha",opacityStrength.Float);
+
 
 				if(shaderLightingModel != DTULightingModel.Matte)
 				{
@@ -1164,6 +1171,14 @@ namespace Daz3D
 					}
 					mat.SetColor("_Emission",emissionColorValue);
 				}
+			}
+
+
+			//Fallback handling
+			if(cutoutOpacity.Exists && cutoutOpacity.TextureExists())
+			{
+				mat.SetFloat("_Alpha",cutoutOpacity.Float);
+				mat.SetTexture("_AlphaMap",ImportTextureFromPath(cutoutOpacity.Texture,materialDir, record, false, true));
 			}
 
 
@@ -1291,6 +1306,7 @@ namespace Daz3D
 
 			return mat;
 		}
+
 
 
 		/// <summary>
@@ -1558,6 +1574,131 @@ namespace Daz3D
 
 		}
 		
+		public Material ConvertToUnityOOTHairblendingHair(DTUMaterial dtuMaterial, string materialDir)
+		{
+			//This material type is used for hair in Daz so we can make a few assumptions
+			//there are a lot of properties in this shader but we only support a few here
+
+			var diffuseWeight = dtuMaterial.Get("Diffuse Weight");
+			var diffuseColor = dtuMaterial.Get("Diffuse Color");
+			var diffuseRoughness = dtuMaterial.Get("Diffuse Roughness");
+			var translucencyWeight = dtuMaterial.Get("Translucency Weight");
+			var baseColorEffect = dtuMaterial.Get("Base Color Effect");
+			var translucencyColor = dtuMaterial.Get("Translucency Color");
+			var sssReflectanceTint = dtuMaterial.Get("SSS Reflectance Tint");
+			var glossyWeight = dtuMaterial.Get("Glossy Weight");
+			var shareGlossyInputs = dtuMaterial.Get("Share Glossy Inputs");
+			var glossyColor = dtuMaterial.Get("Glossy Color");
+			var glossyColorEffect = dtuMaterial.Get("Glossy Color Effect");
+			var glossyRoughness = dtuMaterial.Get("Glossy Roughness");
+			var glossyAnisotropy = dtuMaterial.Get("Glossy Anisotropy");
+			var backscatteringWeight = dtuMaterial.Get("Backscattering Weight");
+			var backscatteringColor = dtuMaterial.Get("Backscattering Color");
+			var backscatteringRoughness = dtuMaterial.Get("Backscattering Roughness");
+			var backscatteringAnisotropy = dtuMaterial.Get("Backscattering Anisotropy");
+			var refractionIndex = dtuMaterial.Get("Refraction Index");
+			var abbe = dtuMaterial.Get("Abbe");
+			var refractionWeight = dtuMaterial.Get("Refraction Weight");
+			var refractionColor = dtuMaterial.Get("Refraction Color");
+			var refractionRoughness = dtuMaterial.Get("Refraction Roughness");
+			var glossyAnisotropyRotations = dtuMaterial.Get("Glossy Anisotropy Rotations");
+			var bumpStrength = dtuMaterial.Get("Bump Strength");
+			var normalMap = dtuMaterial.Get("Normal Map");
+			var topCoatWeight = dtuMaterial.Get("Top Coat Weight");
+			var topCoatColor = dtuMaterial.Get("Top Coat Color");
+			var topCoatColorEffect = dtuMaterial.Get("Top Coat Color Effect");
+			var topCoatRoughness = dtuMaterial.Get("Top Coat Roughness");
+			var topCoatAnisotropy = dtuMaterial.Get("Top Coat Anisotropy");
+			var topCoatRotations = dtuMaterial.Get("Top Coat Rotations");
+			var topCoatBumpMode = dtuMaterial.Get("Top Coat Bump Mode");
+			var thinWalled = dtuMaterial.Get("Thin Walled");
+			var transmittedMeasurementDistance = dtuMaterial.Get("Transmitted Measurement Distance");
+			var transmittedColor = dtuMaterial.Get("Transmitted Color");
+			var scatteringMeasurementDistance = dtuMaterial.Get("Scattering Measurement Distance");
+			var sssAmount = dtuMaterial.Get("SSS Amount");
+			var sssDirection = dtuMaterial.Get("SSS Direction");
+			var cutoutOpacity = dtuMaterial.Get("Cutout Opacity");
+			var displacementStrength = dtuMaterial.Get("Displacement Strength");
+			var minimumDisplacement = dtuMaterial.Get("Minimum Displacement");
+			var maximumDisplacement = dtuMaterial.Get("Maximum Displacement");
+			var subDDisplacementLevel = dtuMaterial.Get("SubD Displacement Level");
+
+			var roughnessSquared = dtuMaterial.Get("Roughness Squared");
+			var glossyOverlayColor = dtuMaterial.Get("Glossy Overlay Color");
+			var translucencyOverlayColor = dtuMaterial.Get("Translucency Overlay Color");
+			var diffuseOverlayColor = dtuMaterial.Get("Diffuse Overlay Color");
+			var overlayMode = dtuMaterial.Get("Overlay Mode");
+			var overlayAlphaMask = dtuMaterial.Get("Overlay Alpha Mask");
+			var topCoatOverlayColor = dtuMaterial.Get("Top Coat Overlay Color");
+
+
+			var horizontalTile = dtuMaterial.Get("Horizontal Tiles");
+			var horizontalOffset = dtuMaterial.Get("Horizontal Offset");
+			var verticalTile = dtuMaterial.Get("Vertical Tiles");
+			var verticalOffset = dtuMaterial.Get("Vertical Offset");
+			var uvSet = dtuMaterial.Get("UV Set");
+
+
+			var matNameLower = dtuMaterial.MaterialName.ToLower();
+			var assetNameLower = dtuMaterial.AssetName.ToLower();
+			var valueLower = dtuMaterial.Value.ToLower();
+			
+			string shaderName = DTU_Constants.shaderNameHair;
+			var shader = Shader.Find(shaderName);
+			if(shader == null)
+			{
+				UnityEngine.Debug.LogError("Failed to locate shader: " + shaderName + " for mat: " + dtuMaterial.MaterialName);
+				return null;
+			}
+			var mat = new Material(shader);
+			var record = new Daz3DDTUImporter.ImportEventRecord();
+
+
+			bool isDoubleSided = true;
+			bool isTransparent = true;
+
+
+
+
+
+			mat.SetColor("_Diffuse",diffuseColor.Color);
+			mat.SetTexture("_DiffuseMap",ImportTextureFromPath(diffuseColor.Texture,materialDir, record));
+			mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir, record, true));
+			mat.SetFloat("_NormalStrength",normalMap.Float);
+			mat.SetFloat("_Height",bumpStrength.Float);
+			mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false, true));
+			mat.SetFloat("_HeightOffset",0.25f);
+			mat.SetTexture("_CutoutOpacityMap",ImportTextureFromPath(cutoutOpacity.Texture,materialDir, record, false, true));
+			mat.SetTexture("_GlossyRoughnessMap",ImportTextureFromPath(glossyRoughness.Texture,materialDir, record, false, true));
+			mat.SetFloat("_GlossyRoughness",glossyRoughness.Float);
+
+			mat.SetTexture("_SpecularMap",ImportTextureFromPath(glossyColor.Texture,materialDir,record));
+			mat.SetColor("_SpecularColor",glossyColor.Color);
+
+			//A few magic values that work for most hairs
+			mat.SetFloat("_AlphaStrength",1.5f);
+			mat.SetFloat("_AlphaOffset",0.35f);
+			mat.SetFloat("_AlphaClip",0.75f);
+			mat.SetFloat("_AlphaPower",0.4f);
+
+
+			bool hasDualLobeSpecularWeight = false;
+			bool hasDualLobeSpecularReflectivity = false;
+			bool hasGlossyLayeredWeight = false;
+			bool hasGlossyColor = false;
+			int sortingPriority = 0;
+
+			ToggleCommonMaterialProperties(ref mat,matNameLower,isTransparent,isDoubleSided, hasDualLobeSpecularWeight, hasDualLobeSpecularReflectivity,sortingPriority,hasGlossyLayeredWeight,hasGlossyColor);
+
+			if (record.Tokens.Count > 0)
+			{
+				Daz3DDTUImporter.EventQueue.Enqueue(record);
+			}
+
+			return mat;
+
+		}
+		
 
 		/// <summary>
 		/// Creates a unity material (and the physical asset on disk defined by the GetMaterialDir) from the json record inside a .dtu file
@@ -1608,6 +1749,10 @@ namespace Daz3D
 			{
 				materialType = DTUMaterialType.OmUberSurface;
 			}
+			else if(dtuMaterial.MaterialType == "OOT Hairblending Hair" || (dtuMaterial.MaterialType == "Cap" && dtuMaterial.Get("Cap Base Texture").Exists))
+			{
+				materialType = DTUMaterialType.OOTHairblendingHair;
+			}
 			else
 			{
 				//If we don't know what it is, we'll just try, but it's quite possible it won't work
@@ -1646,11 +1791,19 @@ namespace Daz3D
 				}
 			} else if(materialType == DTUMaterialType.OmUberSurface)
 			{
-				var pbrspMat = ConvertToUnityOmUberSurface(dtuMaterial,materialDir);
-				if(pbrspMat != null)
+				var localMat = ConvertToUnityOmUberSurface(dtuMaterial,materialDir);
+				if(localMat != null)
 				{
-					SaveMaterialAsAsset(pbrspMat,materialPath);
-					return pbrspMat;
+					SaveMaterialAsAsset(localMat,materialPath);
+					return localMat;
+				}
+			} else if(materialType == DTUMaterialType.OOTHairblendingHair)
+			{
+				var localMat = ConvertToUnityOOTHairblendingHair(dtuMaterial,materialDir);
+				if(localMat != null)
+				{
+					SaveMaterialAsAsset(localMat,materialPath);
+					return localMat;
 				}
 			}
 
