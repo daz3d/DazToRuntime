@@ -682,7 +682,7 @@ QString DzUnrealMorphSelectionDialog::GetMorphCSVString()
 	foreach(MorphInfo exportMorph, morphsToExport)
 	{
 		morphList.append(exportMorph.Name);
-		morphString += "\"" + exportMorph.Name + ",\"Export\"\n";
+		morphString += "\"" + exportMorph.Name + "\",\"Export\"\n";
 	}
 	morphString += "\".CTRLVS\", \"Ignore\"\n";
 	morphString += "\"Anything\", \"Bake\"\n";
