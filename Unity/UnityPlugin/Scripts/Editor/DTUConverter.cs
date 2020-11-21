@@ -66,6 +66,7 @@ namespace Daz3D
 			DazStudioDefault,
 			OmUberSurface,
 			OOTHairblendingHair,
+			BlendedDualLobeHair, //used in some dforce hairs
 		}
 
 		/// <summary>
@@ -1573,6 +1574,114 @@ namespace Daz3D
 			return mat;
 
 		}
+		public Material ConvertToUnityBlendedDualLobeHair(DTUMaterial dtuMaterial, string materialDir)
+		{
+
+			var linePreviewColor = dtuMaterial.Get("Line Preview Color");
+			var lineStartWidth = dtuMaterial.Get("Line Start Width");
+			var lineEndWidth = dtuMaterial.Get("Line End Width");
+			var lineUVWidth = dtuMaterial.Get("Line UV Width");
+
+			var rootTransmissionColor = dtuMaterial.Get("Root Transmission Color");
+			var tipTransmissionColor = dtuMaterial.Get("Tip Transmission Color");
+			var viewportColor = dtuMaterial.Get("Viewport Color");
+			var glossyLayerWeight = dtuMaterial.Get("Glossy Layer Weight");
+			var hairRootColor = dtuMaterial.Get("Hair Root Color");
+			var hairTipColor = dtuMaterial.Get("Hair Tip Color");
+			var baseRoughness = dtuMaterial.Get("base_roughness"); //not a typo
+			var highlightWeight = dtuMaterial.Get("Highlight Weight");
+			var highlightRootColor = dtuMaterial.Get("Highlight Root Color");
+			var tipHighlightColor = dtuMaterial.Get("Tip Highlight Color");
+			var highlightRoughness = dtuMaterial.Get("highlight_roughness"); //not a typo
+			var separation = dtuMaterial.Get("separation"); //not a typo
+			var rootToTipBias = dtuMaterial.Get("Root To Tip Bias");
+			var rootToTipGain = dtuMaterial.Get("Root To Tip Gain");
+			var anisotropy = dtuMaterial.Get("Anisotropy");
+			var anisotropyRotations = dtuMaterial.Get("Anisotropy Rotations");
+			var bumpMode = dtuMaterial.Get("Bump Mode"); //Can either be "Height Map"=0 or "Normal Map"=1
+			var bumpStrength = dtuMaterial.Get("Bump Strength");
+			var cutoutOpacity = dtuMaterial.Get("Cutout Opacity");
+			var strength = dtuMaterial.Get("strength"); //not a typo
+			var minimumDisplacement = dtuMaterial.Get("Minimum Displacement");
+			var maximumDisplacement = dtuMaterial.Get("Maximum Displacement");
+			var subdDisplacementLevel = dtuMaterial.Get("SubD Displacement Level");
+			var diffuseColor = dtuMaterial.Get("Diffuse Color");
+
+
+			var horizontalTile = dtuMaterial.Get("Horizontal Tiles");
+			var horizontalOffset = dtuMaterial.Get("Horizontal Offset");
+			var verticalTile = dtuMaterial.Get("Vertical Tiles");
+			var verticalOffset = dtuMaterial.Get("Vertical Offset");
+			var uvSet = dtuMaterial.Get("UV Set");
+
+
+			var matNameLower = dtuMaterial.MaterialName.ToLower();
+			var assetNameLower = dtuMaterial.AssetName.ToLower();
+			var valueLower = dtuMaterial.Value.ToLower();
+			
+			string shaderName = DTU_Constants.shaderNameHair;
+			var shader = Shader.Find(shaderName);
+			if(shader == null)
+			{
+				UnityEngine.Debug.LogError("Failed to locate shader: " + shaderName + " for mat: " + dtuMaterial.MaterialName);
+				return null;
+			}
+			var mat = new Material(shader);
+			var record = new Daz3DDTUImporter.ImportEventRecord();
+
+
+			bool isDoubleSided = true;
+			bool isTransparent = true;
+
+			mat.SetColor("_Diffuse",diffuseColor.Color);
+			mat.SetTexture("_DiffuseMap",ImportTextureFromPath(diffuseColor.Texture,materialDir, record));
+
+			if(Mathf.Approximately((float)bumpMode.Value.AsDouble,0))
+			{
+				//height map
+				mat.SetFloat("_Height",bumpStrength.Float);
+				mat.SetTexture("_HeightMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, false, true));
+				mat.SetFloat("_HeightOffset",0.25f);
+			}
+			else
+			{
+				//normal map
+				mat.SetTexture("_NormalMap",ImportTextureFromPath(bumpStrength.Texture,materialDir, record, true));
+				mat.SetFloat("_NormalStrength",bumpStrength.Float);
+			}
+
+			mat.SetTexture("_CutoutOpacityMap",ImportTextureFromPath(cutoutOpacity.Texture,materialDir, record, false, true));
+			mat.SetTexture("_GlossyRoughnessMap",ImportTextureFromPath(baseRoughness.Texture,materialDir, record, false, true));
+			mat.SetFloat("_GlossyRoughness",baseRoughness.Float);
+
+			mat.SetTexture("_SpecularMap",ImportTextureFromPath(hairRootColor.Texture,materialDir,record));
+			mat.SetColor("_SpecularColor",hairRootColor.Color);
+			
+			mat.SetTexture("_SpecularMapSecondary",ImportTextureFromPath(hairTipColor.Texture,materialDir,record));
+			mat.SetColor("_SpecularColorSecondary",hairTipColor.Color);
+
+			//A few magic values that work for most hairs
+			mat.SetFloat("_AlphaStrength",1.5f);
+			mat.SetFloat("_AlphaOffset",0.35f);
+			mat.SetFloat("_AlphaClip",0.75f);
+			mat.SetFloat("_AlphaPower",0.4f);
+
+
+			bool hasDualLobeSpecularWeight = false;
+			bool hasDualLobeSpecularReflectivity = false;
+			bool hasGlossyLayeredWeight = false;
+			bool hasGlossyColor = false;
+			int sortingPriority = 0;
+
+			ToggleCommonMaterialProperties(ref mat,matNameLower,isTransparent,isDoubleSided, hasDualLobeSpecularWeight, hasDualLobeSpecularReflectivity,sortingPriority,hasGlossyLayeredWeight,hasGlossyColor);
+
+			if (record.Tokens.Count > 0)
+			{
+				Daz3DDTUImporter.EventQueue.Enqueue(record);
+			}
+
+			return mat;
+		}
 		
 		public Material ConvertToUnityOOTHairblendingHair(DTUMaterial dtuMaterial, string materialDir)
 		{
@@ -1753,6 +1862,10 @@ namespace Daz3D
 			{
 				materialType = DTUMaterialType.OOTHairblendingHair;
 			}
+			else if(dtuMaterial.MaterialType == "Blended Dual Lobe Hair")
+			{
+				materialType = DTUMaterialType.BlendedDualLobeHair;
+			}
 			else
 			{
 				//If we don't know what it is, we'll just try, but it's quite possible it won't work
@@ -1800,6 +1913,14 @@ namespace Daz3D
 			} else if(materialType == DTUMaterialType.OOTHairblendingHair)
 			{
 				var localMat = ConvertToUnityOOTHairblendingHair(dtuMaterial,materialDir);
+				if(localMat != null)
+				{
+					SaveMaterialAsAsset(localMat,materialPath);
+					return localMat;
+				}
+			} else if(materialType == DTUMaterialType.BlendedDualLobeHair)
+			{
+				var localMat = ConvertToUnityBlendedDualLobeHair(dtuMaterial,materialDir);
 				if(localMat != null)
 				{
 					SaveMaterialAsAsset(localMat,materialPath);
