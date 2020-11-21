@@ -76,7 +76,7 @@ void DzUnityAction::executeAction()
 #endif
 		  InstallUnityFiles = dlg->installUnityFilesCheckBox->isChecked();
 
-		  CreateUnityFiles();
+		  CreateUnityFiles(true);
 
 		  SubdivisionDialog = DzUnitySubdivisionDialog::Get(dlg);
 		  SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
@@ -119,26 +119,45 @@ QString DzUnityAction::GetMD5(const QString &path)
 
 bool DzUnityAction::CopyFile(QFile *file, QString *dst, bool replace, bool compareFiles)
 {
+	bool dstExists = QFile::exists(*dst);
+
 	if(replace)
 	{
-		if(compareFiles)
+		if(compareFiles && dstExists)
 		{
 			auto srcFileMD5 = GetMD5(file->fileName());
 			auto dstFileMD5 = GetMD5(*dst);
 
-			if(srcFileMD5.compare(dstFileMD5) == 0)
+			if(srcFileMD5.length() > 0 && dstFileMD5.length() > 0 && srcFileMD5.compare(dstFileMD5) == 0)
 			{
 				return false;
 			}
 		}
 
-		if(QFile::exists(*dst))
+		if(dstExists)
 		{
 			QFile::remove(*dst);
 		}
 	}
 
-	return file->copy(*dst);
+	/*
+	if(dstExists)
+	{
+		QFile::setPermissions(QFile::ReadOther | QFile::WriteOther);
+	}
+	*/
+
+	//ensure our output destination file has the correct file permissions
+	//file->setPermissions(QFile::ReadOther | QFile::WriteOther);
+
+	auto result = file->copy(*dst);
+	
+	if(QFile::exists(*dst))
+	{
+		QFile::setPermissions(*dst, QFile::ReadOther | QFile::WriteOther);
+	}
+
+	return result;
 }
 
 void DzUnityAction::CreateUnityFiles(bool replace)
