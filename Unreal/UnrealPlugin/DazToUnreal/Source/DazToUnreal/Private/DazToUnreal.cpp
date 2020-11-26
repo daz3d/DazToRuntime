@@ -151,7 +151,18 @@ void FDazToUnrealModule::StartupModule()
 		  TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
 		  ToolbarExtender->AddToolBarExtension("Settings", EExtensionHook::After, PluginCommands, FToolBarExtensionDelegate::CreateRaw(this, &FDazToUnrealModule::AddToolbarExtension));
 
-		  //LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
+
+		  FString InstallerPath = IPluginManager::Get().FindPlugin("DazToUnreal")->GetBaseDir() / TEXT("Resources") / TEXT("DazToUnrealSetup.exe");
+		  FString InstallerAbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*InstallerPath);
+
+		  FString DazStudioPluginPath = IPluginManager::Get().FindPlugin("DazToUnreal")->GetBaseDir() / TEXT("Resources") / TEXT("dzunrealbridge.dll");
+		  FString DazStudioPluginAbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*InstallerPath);
+
+		  if (FPaths::FileExists(InstallerAbsolutePath)
+			  && FPaths::FileExists(DazStudioPluginAbsolutePath))
+		  {
+			  LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
+		  }
 	 }
 
 	 /*FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DazToUnrealTabName, FOnSpawnTab::CreateRaw(this, &FDazToUnrealModule::OnSpawnPluginTab))
