@@ -6,9 +6,6 @@ public class DazToUnrealRuntime : ModuleRules
 {
 	public DazToUnrealRuntime(ReadOnlyTargetRules Target) : base(Target)
 	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
-
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -23,11 +20,11 @@ public class DazToUnrealRuntime : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
-				"Slate",
-				"SlateCore",
 				"AnimGraphRuntime",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
+
+		PrecompileForTargets = PrecompileTargetsType.Any;
 	}
 }
