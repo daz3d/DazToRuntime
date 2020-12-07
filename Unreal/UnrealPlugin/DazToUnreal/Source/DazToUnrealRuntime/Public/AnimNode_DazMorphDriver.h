@@ -77,7 +77,7 @@ public:
 
 	// Transform component to use as input
 	UPROPERTY(EditAnywhere, Category = "Source (driver)")
-	TEnumAsByte<EDazMorphDriverRotationOrder> RotationConversionOrder;
+	EDazMorphDriverRotationOrder RotationConversionOrder;
 
 	// Whether or not to clamp the driver value and remap it before scaling it
 	UPROPERTY(EditAnywhere, Category=Mapping, meta=(DisplayName="Remap Source"))
