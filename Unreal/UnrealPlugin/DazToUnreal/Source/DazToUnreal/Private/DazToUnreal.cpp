@@ -1004,7 +1004,17 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 for (int32 i = 0; i < morphList.Num(); i++)
 	 {
 		  TSharedPtr<FJsonObject> morph = morphList[i]->AsObject();
-		  MorphMappings.Add(morph->GetStringField(TEXT("Name")), morph->GetStringField(TEXT("Label")));
+		  FString MorphName = morph->GetStringField(TEXT("Name"));
+		  FString MorphLabel = morph->GetStringField(TEXT("Label"));
+
+		  // Daz Studio seems to strip the part of the name before a period when exporting the morph to FBX
+		  if (MorphName.Contains(TEXT(".")))
+		  {
+			  FString Left;
+			  MorphName.Split(TEXT("."), &Left, &MorphName);
+		  }
+
+		  MorphMappings.Add(MorphName, MorphLabel);
 	 }
 
 	 // Combine clothing and body morphs
