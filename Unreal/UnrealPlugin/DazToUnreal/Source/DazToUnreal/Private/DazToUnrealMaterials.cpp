@@ -87,6 +87,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 			MaterialName.EndsWith(TEXT("_Hips")) ||
 			MaterialName.EndsWith(TEXT("_Feet")) ||
 			MaterialName.EndsWith(TEXT("_Torso")) ||
+			MaterialName.EndsWith(TEXT("_Body")) ||
 			MaterialName.EndsWith(TEXT("_Neck")) ||
 			MaterialName.EndsWith(TEXT("_Shoulders")) ||
 			MaterialName.EndsWith(TEXT("_Arms")) ||
