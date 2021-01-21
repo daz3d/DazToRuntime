@@ -7,4 +7,5 @@ class FDazToUnrealUtils
 {
 public:
 	static FString SanitizeName(FString OriginalName);
+	static bool MakeDirectoryAndCheck(FString& Directory);
 };
