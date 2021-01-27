@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 3,
-	"VersionName": "3.0",
+	"Version": 4,
+	"VersionName": "4.0",
 	"FriendlyName": "DazToUnreal",
 	"Description": "",
 	"Category": "Importers",
@@ -10,7 +10,6 @@
 	"DocsURL": "http://docs.daz3d.com/doku.php/public/read_me/index/72003/start",
 	"MarketplaceURL": "",
 	"SupportURL": "https://www.daz3d.com/help/",
-	"EngineVersion": "4.25.0",
 	"CanContainContent": true,
 	"Installed": true,
 	"Modules": [
@@ -21,8 +20,26 @@
 			"WhitelistPlatforms": [
 				"Win64"
 			]
+		},
+		{
+			"Name": "DazToUnrealDeveloper",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "DazToUnrealRuntime",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64"
+			]
 		}
 	],
+
+
 	"Plugins": [
 		{
 			"Name": "EditorScriptingUtilities",

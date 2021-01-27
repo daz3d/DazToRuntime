@@ -32,12 +32,15 @@ public class DazToUnreal : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-            "EditorScriptingUtilities",
+				"EditorScriptingUtilities",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
-		
-		
+
+#if UE_4_26_OR_LATER
+		PrivateDependencyModuleNames.Add("DeveloperSettings");
+#endif
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{

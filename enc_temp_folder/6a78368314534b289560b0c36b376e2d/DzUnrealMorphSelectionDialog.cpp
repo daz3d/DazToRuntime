@@ -189,8 +189,8 @@ void DzUnrealMorphSelectionDialog::PrepareDialog()
 {
 	DzNode* Selection = dzScene->getPrimarySelection();
 
-	// For items like clothing, create the morph list from the character
 	DzNode* ParentFigureNode = Selection;
+	// If this is a figure, send it as a skeletal mesh
 	while (ParentFigureNode->getNodeParent())
 	{
 		ParentFigureNode = ParentFigureNode->getNodeParent();

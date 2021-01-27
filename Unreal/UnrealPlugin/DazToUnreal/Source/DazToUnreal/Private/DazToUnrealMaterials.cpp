@@ -87,6 +87,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 			MaterialName.EndsWith(TEXT("_Hips")) ||
 			MaterialName.EndsWith(TEXT("_Feet")) ||
 			MaterialName.EndsWith(TEXT("_Torso")) ||
+			MaterialName.EndsWith(TEXT("_Body")) ||
 			MaterialName.EndsWith(TEXT("_Neck")) ||
 			MaterialName.EndsWith(TEXT("_Shoulders")) ||
 			MaterialName.EndsWith(TEXT("_Arms")) ||
@@ -208,22 +209,9 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			}
 		}
 	}
-	/*
-	// Set the default material type
-	if (CachedSettings->DefaultShaderMaterials.Contains(ShaderName))
-	{
-		BaseMaterialAssetPath = CachedSettings->DefaultShaderMaterials[ShaderName];
-	}*/
 
-	/*if (AssetType == TEXT("Follower/Hair"))
-	{
-		BaseMaterialAssetPath = CachedSettings->BaseHairMaterial;
-		if (MaterialName.EndsWith(TEXT("_scalp")))
-		{
-			BaseMaterialAssetPath = CachedSettings->BaseScalpMaterial;
-		}
-	}*/
-	/*else*/ if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes"))
+	if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes") ||
+		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes"))
 	{
 		if (MaterialName.Contains(TEXT("_EyeMoisture")) || MaterialName.EndsWith(TEXT("_EyeReflection")))
 		{
@@ -231,6 +219,13 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Diffuse Color"), TEXT("Color"), TEXT("#bababa"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
+		}
+		else if (MaterialName.EndsWith(TEXT("_Tear")))
+		{
+			//BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
+			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else

@@ -19,11 +19,16 @@ public:
 		Port = 32345;
 		ImportDirectory.Path = TEXT("/Game/DazToUnreal");
 		AnimationImportDirectory.Path = TEXT("/Game/DazToUnreal/Animation");
+		PoseImportDirectory.Path = TEXT("/Game/DazToUnreal/Pose");
 		ShowFBXImportDialog = false;
 		FrameZeroIsReferencePose = false;
+		FixBoneRotationsOnImport = false;
+
 		Genesis1Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis1BaseSkeleton.Genesis1BaseSkeleton"));
 		Genesis3Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton"));
 		Genesis8Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton"));
+		OtherSkeletons.Add(TEXT("Genesis8_1Male"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
+		OtherSkeletons.Add(TEXT("Genesis8_1Female"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
 
 		Genesis1PostProcessAnimation = FSoftClassPath(TEXT("/DazToUnreal/Genesis1JCMPostProcess.Genesis1JCMPostProcess_C"));
 		Genesis3PostProcessAnimation = FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C"));
@@ -33,11 +38,13 @@ public:
 		BaseShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberBaseMaterial.omUberBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceBaseMaterial.AoASubsurfaceBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("Iray Uber"), FSoftObjectPath(TEXT("/DazToUnreal/IrayUberBaseMaterial.IrayUberBaseMaterial")));
+		BaseShaderMaterials.Add(TEXT("PBRSkin"), FSoftObjectPath(TEXT("/DazToUnreal/BasePBRSkinMaterial.BasePBRSkinMaterial")));
 
 		SkinShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
 		SkinShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberSkinMaterial.omUberSkinMaterial")));
 		SkinShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceSkinMaterial.AoASubsurfaceSkinMaterial")));
 		SkinShaderMaterials.Add(TEXT("Iray Uber"), FSoftObjectPath(TEXT("/DazToUnreal/IrayUberSkinMaterial.IrayUberSkinMaterial")));
+		SkinShaderMaterials.Add(TEXT("PBRSkin"), FSoftObjectPath(TEXT("/DazToUnreal/BasePBRSkinMaterial.BasePBRSkinMaterial")));
 
 		BaseMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseMaterial.BaseMaterial"));
 		BaseAlphaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
@@ -94,6 +101,10 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = PluginSettings, meta = (RelativeToGameContentDir, LongPackageName))
 		FDirectoryPath AnimationImportDirectory;
 
+	/** Directory PoseAssets will be imported to */
+	UPROPERTY(config, EditAnywhere, Category = PluginSettings, meta = (RelativeToGameContentDir, LongPackageName))
+		FDirectoryPath PoseImportDirectory;
+
 	/** Show the FBX Import dialog when importing the udpated FBX file */
 	UPROPERTY(config, EditAnywhere, Category = PluginSettings, meta = (RelativeToGameContentDir, LongPackageName))
 		bool ShowFBXImportDialog;
@@ -101,6 +112,10 @@ public:
 	/** Set the default pose for the character to match frame 0 */
 	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
 		bool FrameZeroIsReferencePose;
+
+	/** Updates the bones to use a locale rotation.  This currently breaks animations coming from Daz Studio. */
+	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
+		bool FixBoneRotationsOnImport;
 
 	/** Skeleton to use for Genesis 1 characters */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings, meta = (AllowedClasses = "Skeleton"))
