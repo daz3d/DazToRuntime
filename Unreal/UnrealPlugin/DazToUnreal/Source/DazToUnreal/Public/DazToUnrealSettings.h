@@ -85,6 +85,9 @@ public:
 		MaterialPropertyMapping.Add(TEXT("Specular Strength"), TEXT("Glossy Layered Weight"));
 		MaterialPropertyMapping.Add(TEXT("Specular Strength Texture"), TEXT("Glossy Layered Weight Texture"));
 		MaterialPropertyMapping.Add(TEXT("Specular Strength Texture Active"), TEXT("Glossy Layered Weight Texture Active"));
+
+		DefaultSkinDiffuseSubsurfaceColorWeight = 0.5f;
+		DefaultEyeMoistureOpacity = 0.04f;
 	}
 
 	virtual FName GetCategoryName() const { return FName(TEXT("Plugins")); }
@@ -192,6 +195,14 @@ public:
 	/** Used to change the name of material parameters at import time */
 	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
 		TMap<FString, FString> MaterialPropertyMapping;
+
+	/** Default Diffuse Subsurface Color Weight to use for Skin Materials */
+	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
+		float DefaultSkinDiffuseSubsurfaceColorWeight;
+
+	/** Default Opacity to use for EyeMoisture, Tears, etc */
+	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
+		float DefaultEyeMoistureOpacity;
 
 	/** Override for the sub surface scatter opacity texture for the arms and fingernails for Genesis 3 Male  */
 	UPROPERTY(config, EditAnywhere, Category = SubSurfaceScatterGenesis, meta = (AllowedClasses = "Texture"))

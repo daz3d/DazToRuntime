@@ -1253,47 +1253,50 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 //MaterialProperties[IntermediateMaterialName] = MaterialProperties[ChildMaterials[0]];
 
 
-
 					 // Create Material
 					 FSoftObjectPath BaseMaterialPath = FDazToUnrealMaterials::GetMostCommonBaseMaterial(ChildMaterials, MaterialProperties);//FDazToUnrealMaterials::GetBaseMaterial(ChildMaterials[0], MaterialProperties[IntermediateMaterialName]);
 					 UObject* BaseMaterial = BaseMaterialPath.TryLoad();
-					 UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, nullptr);
+					 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForTorso(CharacterMaterialFolder, MaterialProperties);
+					 UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, nullptr, MasterSubsurfaceProfile);
 					 UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
 					 for (FString MaterialName : ChildMaterials)
 					 {
-						  if (FDazToUnrealMaterials::GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]) == BaseMaterialPath)
-						  {
-								// Remove Identical Properties
-								//for (FString ChildMaterialNameForRemoval : ChildMaterials)
+						USubsurfaceProfile* SubsurfaceProfile = MasterSubsurfaceProfile;
+						if (!FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(MasterSubsurfaceProfile, MaterialProperties[MaterialName]))
+						{
+							SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(MaterialName, ChildMaterialFolder, MaterialProperties[MaterialName]);
+						}
+
+						if (FDazToUnrealMaterials::GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]) == BaseMaterialPath)
+						{
+
+							int32 Length = MaterialProperties[MaterialName].Num();
+							for (int32 Index = Length - 1; Index >= 0; Index--)
+							{
+								FDUFTextureProperty ChildPropertyForRemoval = MaterialProperties[MaterialName][Index];
+								if (ChildPropertyForRemoval.Name == TEXT("Asset Type")) continue;
+								for (FDUFTextureProperty ParentProperty : MaterialProperties[IntermediateMaterialName])
 								{
-
-									 int32 Length = MaterialProperties[MaterialName].Num();
-									 for (int32 Index = Length - 1; Index >= 0; Index--)
-									 {
-										  FDUFTextureProperty ChildPropertyForRemoval = MaterialProperties[MaterialName][Index];
-										  if (ChildPropertyForRemoval.Name == TEXT("Asset Type")) continue;
-										  for (FDUFTextureProperty ParentProperty : MaterialProperties[IntermediateMaterialName])
-										  {
-												if (ParentProperty.Name == ChildPropertyForRemoval.Name && ParentProperty.Value == ChildPropertyForRemoval.Value)
-												{
-													 MaterialProperties[MaterialName].RemoveAt(Index);
-													 break;
-												}
-										  }
-									 }
+									if (ParentProperty.Name == ChildPropertyForRemoval.Name && ParentProperty.Value == ChildPropertyForRemoval.Value)
+									{
+											MaterialProperties[MaterialName].RemoveAt(Index);
+											break;
+									}
 								}
+							}
 
-								FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, UnrealMaterialConstant);
-						  }
-						  else
-						  {
-								FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, nullptr);
-						  }
+							FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, UnrealMaterialConstant, SubsurfaceProfile);
+						}
+						else
+						{
+							FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
+						}
 					 }
 				}
 				else if (ChildMaterials.Num() == 1)
 				{
-					 FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder / IntermediateMaterialName, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr);
+					USubsurfaceProfile* SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(ChildMaterials[0], CharacterMaterialFolder / ChildMaterials[0], MaterialProperties[ChildMaterials[0]]);
+					FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder / IntermediateMaterialName, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
 				}
 
 		  }
@@ -1307,7 +1310,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 {
 		 if (UAnimSequence* AnimSequence = Cast<UAnimSequence>(NewObject))
 		 {
-			 FDazToUnrealPoses::CreatePoseAsset(AnimSequence, PoseNameList);
+			 UPoseAsset* NewPoseAsset = FDazToUnrealPoses::CreatePoseAsset(AnimSequence, PoseNameList);
+
+			 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+			 TArray<UObject*> AssetsToSelect;
+			 AssetsToSelect.Add((UObject*)NewPoseAsset);
+			 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
 		 }
 	 }
 
@@ -1316,7 +1324,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 
 
-bool FDazToUnrealModule::CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType)
+/*bool FDazToUnrealModule::CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType)
 {
 	 const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 
@@ -1328,7 +1336,7 @@ bool FDazToUnrealModule::CreateMaterials(const FString CharacterMaterialFolder, 
 
 
 	 return true;
-}
+}*/
 
 
 // Modified from the FColor::FromHex function
