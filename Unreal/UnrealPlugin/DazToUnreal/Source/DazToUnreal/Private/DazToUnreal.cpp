@@ -1224,6 +1224,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 // Create Intermediate Materials
 	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
 	 {
+		 // Create a default Master Subsurface Profile if needed
+		 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, MaterialProperties);
+
 		  for (FString IntermediateMaterialName : IntermediateMaterials)
 		  {
 				TArray<FString> ChildMaterials;
@@ -1256,7 +1259,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 // Create Material
 					 FSoftObjectPath BaseMaterialPath = FDazToUnrealMaterials::GetMostCommonBaseMaterial(ChildMaterials, MaterialProperties);//FDazToUnrealMaterials::GetBaseMaterial(ChildMaterials[0], MaterialProperties[IntermediateMaterialName]);
 					 UObject* BaseMaterial = BaseMaterialPath.TryLoad();
-					 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForTorso(CharacterMaterialFolder, MaterialProperties);
 					 UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, nullptr, MasterSubsurfaceProfile);
 					 UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
 					 for (FString MaterialName : ChildMaterials)

@@ -617,7 +617,7 @@ FString FDazToUnrealMaterials::GetMaterialProperty(const FString& PropertyName, 
 	return FString();
 }
 
-USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceProfileForTorso(const FString CharacterMaterialFolder, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties)
+USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(const FString CharacterMaterialFolder, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties)
 {
 	// Find the torso material.
 	for (TPair<FString, TArray<FDUFTextureProperty>> Pair : MaterialProperties)
