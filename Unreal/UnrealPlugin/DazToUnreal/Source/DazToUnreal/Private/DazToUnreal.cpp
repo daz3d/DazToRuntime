@@ -1429,21 +1429,26 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 FbxFactory->AddToRoot();
 
 	 USkeleton* Skeleton = nullptr;
+	 FSoftObjectPath SkeletonPath;
 	 if (CharacterType == DazCharacterType::Genesis1)
 	 {
 		  Skeleton = (USkeleton*)CachedSettings->Genesis1Skeleton.TryLoad();
+		  SkeletonPath = CachedSettings->Genesis1Skeleton;
 	 }
 	 if (CharacterType == DazCharacterType::Genesis3Male || CharacterType == DazCharacterType::Genesis3Female)
 	 {
 		  Skeleton = (USkeleton*)CachedSettings->Genesis3Skeleton.TryLoad();
+		  SkeletonPath = CachedSettings->Genesis3Skeleton;
 	 }
 	 if (CharacterType == DazCharacterType::Genesis8Male || CharacterType == DazCharacterType::Genesis8Female)
 	 {
 		  Skeleton = (USkeleton*)CachedSettings->Genesis8Skeleton.TryLoad();
+		  SkeletonPath = CachedSettings->Genesis8Skeleton;
 	 }
 	 if (CharacterType == DazCharacterType::Unknown && CachedSettings->OtherSkeletons.Contains(CharacterTypeName))
 	 {
 		  Skeleton = (USkeleton*)CachedSettings->OtherSkeletons[CharacterTypeName].TryLoad();
+		  SkeletonPath = CachedSettings->OtherSkeletons[CharacterTypeName];
 	 }
 
 	 UFbxImportUI* ImportUI = NewObject<UFbxImportUI>();
@@ -1518,17 +1523,9 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 {
 		  if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(ImportedAsset))
 		  {
-				if (CharacterType == DazCharacterType::Genesis1)
+				if (CachedSettings->SkeletonPostProcessAnimation.Contains(SkeletonPath))
 				{
-					 SkeletalMesh->PostProcessAnimBlueprint = CachedSettings->Genesis1PostProcessAnimation.TryLoadClass<UAnimInstance>();
-				}
-				if (CharacterType == DazCharacterType::Genesis3Male || CharacterType == DazCharacterType::Genesis3Female)
-				{
-					 SkeletalMesh->PostProcessAnimBlueprint = CachedSettings->Genesis3PostProcessAnimation.TryLoadClass<UAnimInstance>();
-				}
-				if (CharacterType == DazCharacterType::Genesis8Male || CharacterType == DazCharacterType::Genesis8Female)
-				{
-					 SkeletalMesh->PostProcessAnimBlueprint = CachedSettings->Genesis8PostProcessAnimation.TryLoadClass<UAnimInstance>();
+					SkeletalMesh->PostProcessAnimBlueprint = CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>();
 				}
 
 				//Get the new skeleton

@@ -30,9 +30,8 @@ public:
 		OtherSkeletons.Add(TEXT("Genesis8_1Male"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
 		OtherSkeletons.Add(TEXT("Genesis8_1Female"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
 
-		Genesis1PostProcessAnimation = FSoftClassPath(TEXT("/DazToUnreal/Genesis1JCMPostProcess.Genesis1JCMPostProcess_C"));
-		Genesis3PostProcessAnimation = FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C"));
-		Genesis8PostProcessAnimation = FSoftClassPath(TEXT("/DazToUnreal/Genesis8JCMPostProcess.Genesis8JCMPostProcess_C"));
+		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C")));
+		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis8JCMPostProcess.Genesis8JCMPostProcess_C")));
 
 		BaseShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberBaseMaterial.omUberBaseMaterial")));
@@ -136,17 +135,9 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
 		TMap<FString, FSoftObjectPath> OtherSkeletons;
 
-	/** Post Process Animation Blueprint to use for Genesis 1 characters */
+	/** A mapping of default post process animations for different skeletons */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
-		FSoftClassPath Genesis1PostProcessAnimation;
-
-	/** Post Process Animation Blueprint to use for Genesis 3 characters */
-	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
-		FSoftClassPath Genesis3PostProcessAnimation;
-
-	/** Post Process Animation Blueprint to use for Genesis 8 characters */
-	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
-		FSoftClassPath Genesis8PostProcessAnimation;
+		TMap<FSoftObjectPath, FSoftClassPath> SkeletonPostProcessAnimation;
 
 	/** Used to set the default Material to use for a shader type from Daz Studio */
 	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
