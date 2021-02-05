@@ -1031,7 +1031,14 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 			  MorphName.Split(TEXT("."), &Left, &MorphName);
 		  }
 
-		  MorphMappings.Add(MorphName, MorphLabel);
+		  if (CachedSettings->UseInternalMorphName)
+		  {
+			  MorphMappings.Add(MorphName, MorphName);
+		  }
+		  else
+		  {
+			  MorphMappings.Add(MorphName, MorphLabel);
+		  }
 	 }
 
 	 // Get a list of morph name mappings

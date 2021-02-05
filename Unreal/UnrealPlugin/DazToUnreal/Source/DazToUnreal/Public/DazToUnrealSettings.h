@@ -55,6 +55,8 @@ public:
 		BaseCorneaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
 		NoDrawMaterial = FSoftObjectPath(TEXT("/DazToUnreal/NoDrawMaterial.NoDrawMaterial"));
 
+		UseInternalMorphName = false;
+
 		ArmsSubSurfaceOpacityGenesis1Texture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
 		FaceSubSurfaceOpacityGenesis1Texture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
 		LegsSubSurfaceOpacityGenesis1Texture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
@@ -194,6 +196,10 @@ public:
 	/** Default Opacity to use for EyeMoisture, Tears, etc */
 	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
 		float DefaultEyeMoistureOpacity;
+
+	/** Use the internal name rather than the display name when transfering morphs */
+	UPROPERTY(config, EditAnywhere, Category = MorphSettings)
+		bool UseInternalMorphName;
 
 	/** Override for the sub surface scatter opacity texture for the arms and fingernails for Genesis 3 Male  */
 	UPROPERTY(config, EditAnywhere, Category = SubSurfaceScatterGenesis, meta = (AllowedClasses = "Texture"))
