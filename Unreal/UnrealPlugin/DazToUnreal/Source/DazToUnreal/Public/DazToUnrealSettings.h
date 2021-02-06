@@ -23,6 +23,7 @@ public:
 		ShowFBXImportDialog = false;
 		FrameZeroIsReferencePose = false;
 		FixBoneRotationsOnImport = false;
+		ZeroRootRotationOnImport = false;
 
 		Genesis1Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis1BaseSkeleton.Genesis1BaseSkeleton"));
 		Genesis3Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton"));
@@ -120,6 +121,10 @@ public:
 	/** Updates the bones to use a locale rotation.  This currently breaks animations coming from Daz Studio. */
 	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
 		bool FixBoneRotationsOnImport;
+
+	/** Updates the bones to use a locale rotation.  This currently breaks animations coming from Daz Studio. */
+	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
+		bool ZeroRootRotationOnImport;
 
 	/** Skeleton to use for Genesis 1 characters */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings, meta = (AllowedClasses = "Skeleton"))

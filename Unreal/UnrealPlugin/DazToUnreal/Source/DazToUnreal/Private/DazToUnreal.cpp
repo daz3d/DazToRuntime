@@ -1471,6 +1471,8 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMorphTargets = true;
 		  FbxFactory->ImportUI->bImportAnimations = true;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bUseT0AsRefPose = CachedSettings->FrameZeroIsReferencePose;
+		  FbxFactory->ImportUI->SkeletalMeshImportData->bConvertScene = true;
+		  FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
 	 }
 	 if (AssetType == DazAssetType::StaticMesh)
