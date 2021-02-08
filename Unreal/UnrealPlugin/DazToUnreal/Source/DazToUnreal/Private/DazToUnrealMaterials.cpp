@@ -4,7 +4,10 @@
 
 #include "Materials/MaterialInstanceConstant.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "Factories/SubsurfaceProfileFactory.h"
+#include "Engine/SubsurfaceProfile.h"
 #include "AssetRegistryModule.h"
+#include "AssetToolsModule.h"
 
 FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterialForShader(FString ShaderName)
 {
@@ -75,7 +78,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	else if (AssetType == TEXT("Follower/Attachment/Lower-Body/Hip/Front") &&
 		MaterialName.Contains(TEXT("_Genitalia")))
 	{
-		BaseMaterialAssetPath = CachedSettings->BaseSkinMaterial;
+		BaseMaterialAssetPath = GetSkinMaterialForShader(ShaderName);
 	}
 	else if (AssetType == TEXT("Actor/Character"))
 	{
@@ -130,7 +133,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 		}
-		else if (MaterialName.EndsWith(TEXT("_sclera")))
+		/*else if (MaterialName.EndsWith(TEXT("_sclera")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseMaterial;
 		}
@@ -141,10 +144,10 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		else if (MaterialName.EndsWith(TEXT("_pupils")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseMaterial;
-		}
+		}*/
 		else
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseMaterial;
+			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
 
 			for (FDUFTextureProperty Property : Properties)
 			{
@@ -184,7 +187,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	return BaseMaterialAssetPath;
 }
 
-UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, FString& MaterialName, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType, UMaterialInstanceConstant* ParentMaterial)
+UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, FString& MaterialName, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType, UMaterialInstanceConstant* ParentMaterial, USubsurfaceProfile* SubsurfaceProfile)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 
@@ -211,21 +214,23 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 	}
 
 	if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes") ||
-		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes"))
+		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes") ||
+		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes/Tear") ||
+		AssetType == TEXT("Follower/Attachment/Head/Face/Tears"))
 	{
 		if (MaterialName.Contains(TEXT("_EyeMoisture")) || MaterialName.EndsWith(TEXT("_EyeReflection")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
-			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Diffuse Color"), TEXT("Color"), TEXT("#bababa"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(TEXT("_Tear")))
+		else if (MaterialName.EndsWith(TEXT("_Tear")) || MaterialName.EndsWith(TEXT("_Tears")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
-			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else
@@ -245,9 +250,11 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 	{
 		// Check for skin materials
 		if (MaterialName.EndsWith(TEXT("_Face")) ||
+			MaterialName.EndsWith(TEXT("_Head")) ||
 			MaterialName.EndsWith(TEXT("_Lips")) ||
 			MaterialName.EndsWith(TEXT("_Legs")) ||
 			MaterialName.EndsWith(TEXT("_Torso")) ||
+			MaterialName.EndsWith(TEXT("_Body")) ||
 			MaterialName.EndsWith(TEXT("_Arms")) ||
 			MaterialName.EndsWith(TEXT("_EyeSocket")) ||
 			MaterialName.EndsWith(TEXT("_Ears")) ||
@@ -256,20 +263,21 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			MaterialName.EndsWith(TEXT("_Genitalia")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseSkinMaterial;
+			SetMaterialProperty(MaterialName, TEXT("Diffuse Subsurface Color Weight"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultSkinDiffuseSubsurfaceColorWeight), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Subsurface Alpha Texture"), TEXT("Texture"), FDazToUnrealTextures::GetSubSurfaceAlphaTexture(CharacterType, MaterialName), MaterialProperties);
 		}
 		else if (MaterialName.Contains(TEXT("_EyeMoisture")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
-			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(TEXT("_EyeReflection")) || MaterialName.EndsWith(TEXT("_Tear")))
+		else if (MaterialName.EndsWith(TEXT("_EyeReflection")) || MaterialName.EndsWith(TEXT("_Tear")) || MaterialName.EndsWith(TEXT("_Tears")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
-			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else if (MaterialName.EndsWith(TEXT("_EyeLashes")) || MaterialName.EndsWith(TEXT("_Eyelashes")))
@@ -283,7 +291,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
-			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else if (MaterialName.EndsWith(TEXT("_sclera")))
@@ -320,7 +328,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 	{
 		//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 		SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
-		SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), TEXT("0.05"), MaterialProperties);
+		SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 		SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 	}
 	else
@@ -370,6 +378,19 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		else
 		{
 			UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
+		}
+
+		if (SubsurfaceProfile)
+		{
+			if (!ParentMaterial || ParentMaterial->SubsurfaceProfile != SubsurfaceProfile)
+			{
+				UnrealMaterialConstant->bOverrideSubsurfaceProfile = 1;
+				UnrealMaterialConstant->SubsurfaceProfile = SubsurfaceProfile;
+			}
+			else
+			{
+				UnrealMaterialConstant->bOverrideSubsurfaceProfile = 0;
+			}
 		}
 
 		// Set the MaterialInstance properties
@@ -571,4 +592,126 @@ FDUFTextureProperty FDazToUnrealMaterials::GetMostCommonProperty(FString Propert
 		MostCommonProperty.Name = TEXT("");
 	}
 	return MostCommonProperty;
+}
+
+bool FDazToUnrealMaterials::HasMaterialProperty(const FString& PropertyName, const  TArray<FDUFTextureProperty>& MaterialProperties)
+{
+	for (FDUFTextureProperty MaterialProperty : MaterialProperties)
+	{
+		if (MaterialProperty.Name == PropertyName)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+FString FDazToUnrealMaterials::GetMaterialProperty(const FString& PropertyName, const TArray<FDUFTextureProperty>& MaterialProperties)
+{
+	for (FDUFTextureProperty MaterialProperty : MaterialProperties)
+	{
+		if (MaterialProperty.Name == PropertyName)
+		{
+			return MaterialProperty.Value;
+		}
+	}
+	return FString();
+}
+
+USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(const FString CharacterMaterialFolder, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties)
+{
+	// Find the torso material.
+	for (TPair<FString, TArray<FDUFTextureProperty>> Pair : MaterialProperties)
+	{
+		FString AssetType;
+		for (FDUFTextureProperty Property : Pair.Value)
+		{
+			if (Property.Name == TEXT("Asset Type"))
+			{
+				AssetType = Property.Value;
+			}
+		}
+
+		if (AssetType == TEXT("Actor/Character"))
+		{
+			if (Pair.Key.EndsWith(TEXT("_Torso")) || Pair.Key.EndsWith(TEXT("_Body")))
+			{
+				return CreateSubsurfaceProfileForMaterial(Pair.Key, CharacterMaterialFolder, Pair.Value);
+			}
+
+		}
+	}
+	return nullptr;
+}
+
+USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(const FString MaterialName, const FString CharacterMaterialFolder, const TArray<FDUFTextureProperty > MaterialProperties)
+{
+	// Create the Material Instance
+	//auto SubsurfaceProfileFactory = NewObject<USubsurfaceProfileFactory>();
+
+	//Only create for the PBRSkin base material
+	FString ShaderName;
+	for (FDUFTextureProperty Property : MaterialProperties)
+	{
+		if (Property.Name == TEXT("Asset Type"))
+		{
+			ShaderName = Property.ShaderName;
+		}
+	}
+	if (ShaderName != TEXT("PBRSkin"))
+	{
+		return nullptr;
+	}
+
+	FString SubsurfaceProfileName = MaterialName + TEXT("_Profile");
+	UPackage* Package = CreatePackage(nullptr, *(CharacterMaterialFolder / MaterialName));
+	//USubsurfaceProfile* SubsurfaceProfile = (USubsurfaceProfile*)SubsurfaceProfileFactory->FactoryCreateNew(USubsurfaceProfile::StaticClass(), Package, *MaterialName, RF_Standalone | RF_Public, NULL, GWarn);
+	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
+	USubsurfaceProfile* SubsurfaceProfile = Cast<USubsurfaceProfile>(AssetToolsModule.Get().CreateAsset(SubsurfaceProfileName, FPackageName::GetLongPackagePath(*(CharacterMaterialFolder / MaterialName)), USubsurfaceProfile::StaticClass(), NULL));
+	if (HasMaterialProperty(TEXT("Specular Lobe 1 Roughness"), MaterialProperties))
+	{
+		SubsurfaceProfile->Settings.Roughness0 = FCString::Atof(*GetMaterialProperty(TEXT("Specular Lobe 1 Roughness"), MaterialProperties));
+	}
+	if (HasMaterialProperty(TEXT("Specular Lobe 2 Roughness Mult"), MaterialProperties))
+	{
+		SubsurfaceProfile->Settings.Roughness1 = FCString::Atof(*GetMaterialProperty(TEXT("Specular Lobe 2 Roughness Mult"), MaterialProperties));
+	}
+	if (HasMaterialProperty(TEXT("Dual Lobe Specular Ratio"), MaterialProperties))
+	{
+		SubsurfaceProfile->Settings.LobeMix = FCString::Atof(*GetMaterialProperty(TEXT("Dual Lobe Specular Ratio"), MaterialProperties));
+	}
+	if (HasMaterialProperty(TEXT("SSS Color"), MaterialProperties))
+	{
+		SubsurfaceProfile->Settings.SubsurfaceColor = FColor::FromHex(*GetMaterialProperty(TEXT("SSS Color"), MaterialProperties));
+	}
+	if (HasMaterialProperty(TEXT("SSS Color"), MaterialProperties))
+	{
+		SubsurfaceProfile->Settings.SubsurfaceColor = FColor::FromHex(*GetMaterialProperty(TEXT("SSS Color"), MaterialProperties));
+	}
+	if (HasMaterialProperty(TEXT("Transmitted Color"), MaterialProperties))
+	{
+		SubsurfaceProfile->Settings.FalloffColor = FColor::FromHex(*GetMaterialProperty(TEXT("Transmitted Color"), MaterialProperties));
+	}
+	return SubsurfaceProfile;
+}
+
+bool FDazToUnrealMaterials::SubsurfaceProfilesAreIdentical(USubsurfaceProfile* A, USubsurfaceProfile* B)
+{
+	if (A == nullptr || B == nullptr) return false;
+	if (A->Settings.Roughness0 != B->Settings.Roughness0) return false;
+	if (A->Settings.Roughness1 != B->Settings.Roughness1) return false;
+	if (A->Settings.LobeMix != B->Settings.LobeMix) return false;
+	if (A->Settings.SubsurfaceColor != B->Settings.SubsurfaceColor) return false;
+	if (A->Settings.FalloffColor != B->Settings.FalloffColor) return false;
+	return true;
+}
+
+bool FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(USubsurfaceProfile* ExistingSubsurfaceProfile, const TArray<FDUFTextureProperty > MaterialProperties)
+{
+	if (ExistingSubsurfaceProfile == nullptr) return false;
+	if (ExistingSubsurfaceProfile->Settings.Roughness0 != FCString::Atof(*GetMaterialProperty(TEXT("Specular Lobe 1 Roughness"), MaterialProperties))) return false;
+	if (ExistingSubsurfaceProfile->Settings.Roughness1 != FCString::Atof(*GetMaterialProperty(TEXT("Specular Lobe 2 Roughness Mult"), MaterialProperties))) return false;
+	if (ExistingSubsurfaceProfile->Settings.LobeMix != FCString::Atof(*GetMaterialProperty(TEXT("Dual Lobe Specular Ratio"), MaterialProperties))) return false;
+	if (ExistingSubsurfaceProfile->Settings.SubsurfaceColor != FColor::FromHex(*GetMaterialProperty(TEXT("SSS Color"), MaterialProperties))) return false;
+	if (ExistingSubsurfaceProfile->Settings.FalloffColor != FColor::FromHex(*GetMaterialProperty(TEXT("Transmitted Color"), MaterialProperties))) return false;
+	return true;
 }

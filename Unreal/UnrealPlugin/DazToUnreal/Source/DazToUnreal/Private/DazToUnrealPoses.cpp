@@ -14,7 +14,7 @@
 #include "PackageTools.h"
 
 // Partially taken from UPoseAssetFactory::FactoryCreateNew
-void FDazToUnrealPoses::CreatePoseAsset(UAnimSequence* SourceAnimation, TArray<FString> PoseNames)
+UPoseAsset* FDazToUnrealPoses::CreatePoseAsset(UAnimSequence* SourceAnimation, TArray<FString> PoseNames)
 {
 	if (SourceAnimation)
 	{
@@ -62,7 +62,10 @@ void FDazToUnrealPoses::CreatePoseAsset(UAnimSequence* SourceAnimation, TArray<F
 		PoseAsset->CreatePoseFromAnimation(SourceAnimation, &InputPoseNames);
 		PoseAsset->SetSkeleton(TargetSkeleton);
 		PoseAsset->ConvertSpace(true, 0);
+
+		return PoseAsset;
 	}
+	return nullptr;
 	//return NewPose;
 
 	//UPoseAssetFactory* Factory = NewObject<UPoseAssetFactory>();
