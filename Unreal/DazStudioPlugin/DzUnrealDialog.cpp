@@ -127,6 +127,11 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	// Show FBX Dialog option
 	showFbxDialogCheckBox = new QCheckBox("", this);
+	connect(showFbxDialogCheckBox, SIGNAL(stateChanged(int)), this, SLOT(HandleShowFbxDialogCheckBoxChange(int)));
+	
+	// Export Material Property CSV option
+	exportMaterialPropertyCSVCheckBox = new QCheckBox("", this);
+	connect(exportMaterialPropertyCSVCheckBox, SIGNAL(stateChanged(int)), this, SLOT(HandleExportMaterialPropertyCSVCheckBoxChange(int)));
 
 	// Add the widget to the basic dialog
 	mainLayout->addRow("Asset Name", assetNameEdit);
@@ -138,6 +143,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	advancedLayout->addRow("Port", portEdit);
 	advancedLayout->addRow("FBX Version", fbxVersionCombo);
 	advancedLayout->addRow("Show FBX Dialog", showFbxDialogCheckBox);
+	advancedLayout->addRow("Export Material CSV", exportMaterialPropertyCSVCheckBox);
 	addLayout(mainLayout);
 
 	// Advanced
@@ -158,6 +164,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	intermediateFolderButton->setWhatsThis("DazToUnreal will collect the assets in a subfolder under this folder.  Unreal will import them from here.");
 	portEdit->setWhatsThis("The UDP port used to talk to the DazToUnreal Unreal plugin.\nThis needs to match the port set in the Project Settings in Unreal.\nDefault is 32345.");
 	fbxVersionCombo->setWhatsThis("The version of FBX to use when exporting assets.");
+	showFbxDialogCheckBox->setWhatsThis("Checking this will show the FBX Dialog for adjustments before export.");
+	exportMaterialPropertyCSVCheckBox->setWhatsThis("Checking this will write out a CSV of all the material properties.  Useful for reference when changing materials.");
 
 	// Load Settings
 	if (!settings->value("IntermediatePath").isNull())
@@ -184,6 +192,10 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	if (!settings->value("ShowFBXDialog").isNull())
 	{
 		 showFbxDialogCheckBox->setChecked(settings->value("ShowFBXDialog").toBool());
+	}
+	if (!settings->value("ExportMaterialPropertyCSV").isNull())
+	{
+		exportMaterialPropertyCSVCheckBox->setChecked(settings->value("ExportMaterialPropertyCSV").toBool());
 	}
 	if (!settings->value("FBXExportVersion").isNull())
 	{
@@ -272,5 +284,9 @@ void DzUnrealDialog::HandleFBXVersionChange(const QString& fbxVersion)
 void DzUnrealDialog::HandleShowFbxDialogCheckBoxChange(int state)
 {
 	 settings->setValue("ShowFBXDialog", state == Qt::Checked);
+}
+void DzUnrealDialog::HandleExportMaterialPropertyCSVCheckBoxChange(int state)
+{
+	settings->setValue("ExportMaterialPropertyCSV", state == Qt::Checked);
 }
 #include "moc_DzUnrealDialog.cpp"

@@ -29,10 +29,12 @@ protected:
 	 QString MorphString;
 	 QString FBXVersion;
 	 QMap<QString,QString> MorphMapping;
+	 QList<QString> PoseList;
 
 	 bool ExportMorphs;
 	 bool ExportSubdivisions;
 	 bool ShowFbxDialog;
+	 bool ExportMaterialPropertiesCSV;
 	 DzNode* Selection;
 
 	 virtual QString getActionGroup() const { return tr("Bridges"); }

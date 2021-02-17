@@ -33,6 +33,7 @@ public:
 	QGroupBox* advancedSettingsGroupBox;
 	QComboBox* fbxVersionCombo;
 	QCheckBox* showFbxDialogCheckBox;
+	QCheckBox* exportMaterialPropertyCSVCheckBox;
 
 	// Pass so the DazTRoUnrealAction can access it from the morph dialog
 	QString GetMorphString();
@@ -50,6 +51,7 @@ private slots:
 	void HandleSubdivisionCheckBoxChange(int state);
 	void HandleFBXVersionChange(const QString& fbxVersion);
 	void HandleShowFbxDialogCheckBoxChange(int state);
+	void HandleExportMaterialPropertyCSVCheckBoxChange(int state);
 
 private:
 	QSettings* settings;

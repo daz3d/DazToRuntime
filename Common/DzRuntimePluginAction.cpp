@@ -25,6 +25,8 @@
 #include <dzbone.h>
 #include <dzskeleton.h>
 #include <dzpresentation.h>
+#include <dzmodifier.h>
+#include <dzmorph.h>
 
 #include <QtCore/qdir.h>
 #include <QtGui/qlineedit.h>
@@ -114,6 +116,80 @@ void DzRuntimePluginAction::Export()
 		CharacterFBX = CharacterFolder + CharacterName + ".fbx";
 		Selection = OriginalSelection;
 		AssetType = "Environment";
+		ExportNode(Selection);
+	}
+	else if (AssetType == "Pose")
+	{
+		PoseList.clear();
+		DzNode* Selection = dzScene->getPrimarySelection();
+		int poseIndex = 0;
+		DzNumericProperty* previousProperty = nullptr;
+		for (int index = 0; index < Selection->getNumProperties(); index++)
+		{
+			DzProperty* property = Selection->getProperty(index);
+			DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
+			QString propName = property->getName();
+			if (numericProperty)
+			{
+				QString propName = property->getName();
+				qDebug() << propName;
+				if (MorphMapping.contains(propName))
+				{
+					poseIndex++;
+					numericProperty->setDoubleValue(0.0f, 0.0f);
+					for (int frame = 0; frame < MorphMapping.count() + 1; frame++)
+					{
+						numericProperty->setDoubleValue(dzScene->getTimeStep() * double(frame), 0.0f);
+					}
+					numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex),1.0f);
+					//numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex + 1), 0.0f);
+					PoseList.append(propName);
+				}
+			}
+		}
+
+		DzObject* Object = Selection->getObject();
+		if (Object)
+		{
+			for (int index = 0; index < Object->getNumModifiers(); index++)
+			{
+				DzModifier* modifier = Object->getModifier(index);
+				DzMorph* mod = qobject_cast<DzMorph*>(modifier);
+				if (mod)
+				{
+					for (int propindex = 0; propindex < modifier->getNumProperties(); propindex++)
+					{
+						DzProperty* property = modifier->getProperty(propindex);
+						QString propName = property->getName();
+						QString propLabel = property->getLabel();
+						DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
+						if (numericProperty)
+						{
+							QString propName = property->getName();
+							qDebug() << propName;
+							if (MorphMapping.contains(modifier->getName()))
+							{
+								poseIndex++;
+								numericProperty->setDoubleValue(0.0f, 0.0f);
+								for (int frame = 0; frame < MorphMapping.count() + 1; frame++)
+								{
+									numericProperty->setDoubleValue(dzScene->getTimeStep() * double(frame), 0.0f);
+								}
+								numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex), 1.0f);
+								//numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex + 1), 0.0f);
+								PoseList.append(modifier->getName());
+							}
+						}
+					}
+
+				}
+
+			}
+		}
+
+		dzScene->setAnimRange(DzTimeRange(0, poseIndex * dzScene->getTimeStep()));
+		dzScene->setPlayRange(DzTimeRange(0, poseIndex * dzScene->getTimeStep()));
+
 		ExportNode(Selection);
 	}
 	else
