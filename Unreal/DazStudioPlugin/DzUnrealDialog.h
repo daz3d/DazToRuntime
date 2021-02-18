@@ -31,6 +31,7 @@ public:
 	QPushButton* subdivisionButton;
 	QCheckBox* subdivisionEnabledCheckBox;
 	QGroupBox* advancedSettingsGroupBox;
+	QWidget* advancedWidget;
 	QComboBox* fbxVersionCombo;
 	QCheckBox* showFbxDialogCheckBox;
 	QCheckBox* exportMaterialPropertyCSVCheckBox;
@@ -52,6 +53,7 @@ private slots:
 	void HandleFBXVersionChange(const QString& fbxVersion);
 	void HandleShowFbxDialogCheckBoxChange(int state);
 	void HandleExportMaterialPropertyCSVCheckBoxChange(int state);
+	void HandleShowAdvancedSettingsCheckBoxChange(bool checked);
 
 private:
 	QSettings* settings;
