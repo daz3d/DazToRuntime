@@ -43,6 +43,7 @@ DzRuntimePluginAction::DzRuntimePluginAction(const QString& text, const QString&
 	 ExportMorphs = false;
 	 ExportSubdivisions = false;
 	 ShowFbxDialog = false;
+	 ControllersToDisconnect.append("facs_bs_MouthClose_div2");
 }
 
 DzRuntimePluginAction::~DzRuntimePluginAction()
@@ -132,7 +133,6 @@ void DzRuntimePluginAction::Export()
 			if (numericProperty)
 			{
 				QString propName = property->getName();
-				qDebug() << propName;
 				if (MorphMapping.contains(propName))
 				{
 					poseIndex++;
@@ -142,7 +142,6 @@ void DzRuntimePluginAction::Export()
 						numericProperty->setDoubleValue(dzScene->getTimeStep() * double(frame), 0.0f);
 					}
 					numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex),1.0f);
-					//numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex + 1), 0.0f);
 					PoseList.append(propName);
 				}
 			}
@@ -176,7 +175,6 @@ void DzRuntimePluginAction::Export()
 									numericProperty->setDoubleValue(dzScene->getTimeStep() * double(frame), 0.0f);
 								}
 								numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex), 1.0f);
-								//numericProperty->setDoubleValue(dzScene->getTimeStep() * double(poseIndex + 1), 0.0f);
 								PoseList.append(modifier->getName());
 							}
 						}
@@ -191,6 +189,13 @@ void DzRuntimePluginAction::Export()
 		dzScene->setPlayRange(DzTimeRange(0, poseIndex * dzScene->getTimeStep()));
 
 		ExportNode(Selection);
+	}
+	else if (AssetType == "SkeletalMesh")
+	{
+		QList<QString> DisconnectedModifiers = DisconnectOverrideControllers();
+		DzNode* Selection = dzScene->getPrimarySelection();
+		ExportNode(Selection);
+		ReconnectOverrideControllers(DisconnectedModifiers);
 	}
 	else
 	{
@@ -413,6 +418,113 @@ void DzRuntimePluginAction::GetScenePropList(DzNode* Node, QMap<QString, DzNode*
 	{
 		DzNode* ChildNode = Node->getNodeChild(ChildIndex);
 		GetScenePropList(ChildNode, Types);
+	}
+}
+
+QList<QString> DzRuntimePluginAction::DisconnectOverrideControllers()
+{
+	QList<QString> ModifiedList;
+	DzNode* Selection = dzScene->getPrimarySelection();
+	int poseIndex = 0;
+	DzNumericProperty* previousProperty = nullptr;
+	for (int index = 0; index < Selection->getNumProperties(); index++)
+	{
+		DzProperty* property = Selection->getProperty(index);
+		DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
+		QString propName = property->getName();
+		if (numericProperty && !numericProperty->isOverridingControllers())
+		{
+			QString propName = property->getName();
+			if (MorphMapping.contains(propName) && ControllersToDisconnect.contains(propName))
+			{
+				numericProperty->setOverrideControllers(true);
+				ModifiedList.append(propName);
+			}
+		}
+	}
+
+	DzObject* Object = Selection->getObject();
+	if (Object)
+	{
+		for (int index = 0; index < Object->getNumModifiers(); index++)
+		{
+			DzModifier* modifier = Object->getModifier(index);
+			DzMorph* mod = qobject_cast<DzMorph*>(modifier);
+			if (mod)
+			{
+				for (int propindex = 0; propindex < modifier->getNumProperties(); propindex++)
+				{
+					DzProperty* property = modifier->getProperty(propindex);
+					QString propName = property->getName();
+					QString propLabel = property->getLabel();
+					DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
+					if (numericProperty && !numericProperty->isOverridingControllers())
+					{
+						QString propName = property->getName();
+						if (MorphMapping.contains(modifier->getName()) && ControllersToDisconnect.contains(modifier->getName()))
+						{
+							numericProperty->setOverrideControllers(true);
+							ModifiedList.append(modifier->getName());
+						}
+					}
+				}
+
+			}
+
+		}
+	}
+
+	return ModifiedList;
+}
+
+void DzRuntimePluginAction::ReconnectOverrideControllers(QList<QString>& DisconnetedControllers)
+{
+	DzNode* Selection = dzScene->getPrimarySelection();
+	int poseIndex = 0;
+	DzNumericProperty* previousProperty = nullptr;
+	for (int index = 0; index < Selection->getNumProperties(); index++)
+	{
+		DzProperty* property = Selection->getProperty(index);
+		DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
+		QString propName = property->getName();
+		if (numericProperty && numericProperty->isOverridingControllers())
+		{
+			QString propName = property->getName();
+			if (DisconnetedControllers.contains(propName))
+			{
+				numericProperty->setOverrideControllers(false);
+			}
+		}
+	}
+
+	DzObject* Object = Selection->getObject();
+	if (Object)
+	{
+		for (int index = 0; index < Object->getNumModifiers(); index++)
+		{
+			DzModifier* modifier = Object->getModifier(index);
+			DzMorph* mod = qobject_cast<DzMorph*>(modifier);
+			if (mod)
+			{
+				for (int propindex = 0; propindex < modifier->getNumProperties(); propindex++)
+				{
+					DzProperty* property = modifier->getProperty(propindex);
+					QString propName = property->getName();
+					QString propLabel = property->getLabel();
+					DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
+					if (numericProperty && numericProperty->isOverridingControllers())
+					{
+						QString propName = property->getName();
+						if (DisconnetedControllers.contains(modifier->getName()))
+						{
+							numericProperty->setOverrideControllers(false);
+						}
+					}
+				}
+
+			}
+
+		}
 	}
 }
 

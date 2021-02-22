@@ -56,4 +56,9 @@ protected:
 	 // During Environment export props need to get disconnected as they are exported.
 	 void DisconnectNode(DzNode* Node, QList<AttachmentInfo>& AttachmentList);
 	 void ReconnectNodes(QList<AttachmentInfo>& AttachmentList);
+
+	 // During Skeletal Mesh Export Disconnect Override Controllers
+	 QList<QString> DisconnectOverrideControllers();
+	 void ReconnectOverrideControllers(QList<QString>& DisconnetedControllers);
+	 QList<QString> ControllersToDisconnect;
 };
