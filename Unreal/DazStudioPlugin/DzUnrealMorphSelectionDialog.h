@@ -78,6 +78,7 @@ public slots:
 	 void HandleArmJCMMorphsButton();
 	 void HandleLegJCMMorphsButton();
 	 void HandleTorsoJCMMorphsButton();
+	 void HandleARKitGenesis81MorphsButton();
 
 private:
 
