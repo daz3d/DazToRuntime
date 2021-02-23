@@ -126,14 +126,17 @@ DzUnrealMorphSelectionDialog::DzUnrealMorphSelectionDialog(QWidget *parent) :
 	QPushButton* ArmsJCMButton = new QPushButton("Arms");
 	QPushButton* LegsJCMButton = new QPushButton("Legs");
 	QPushButton* TorsoJCMButton = new QPushButton("Torso");
+	QPushButton* ARKit81Button = new QPushButton("ARKit(Genesis8.1)");
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(ArmsJCMButton, 0, 0);
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(LegsJCMButton, 0, 1);
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(TorsoJCMButton, 0, 2);
+	((QGridLayout*)JCMGroupBox->layout())->addWidget(ARKit81Button, 1, 0);
 
 	connect(ArmsJCMButton, SIGNAL(released()), this, SLOT(HandleArmJCMMorphsButton()));
 	connect(LegsJCMButton, SIGNAL(released()), this, SLOT(HandleLegJCMMorphsButton()));
 	connect(TorsoJCMButton, SIGNAL(released()), this, SLOT(HandleTorsoJCMMorphsButton()));
-
+	connect(ARKit81Button, SIGNAL(released()), this, SLOT(HandleARKitGenesis81MorphsButton()));
+	
 	treeLayout->addWidget(JCMGroupBox);
 	morphsLayout->addLayout(treeLayout);
 
@@ -597,6 +600,69 @@ void DzUnrealMorphSelectionDialog::HandleTorsoJCMMorphsButton()
 	MorphsToAdd.append("pJCMChestFwd_35");
 	MorphsToAdd.append("pJCMChestSide_20_L");
 	MorphsToAdd.append("pJCMChestSide_20_R");
+
+	// Add the list for export
+	foreach(QString MorphName, MorphsToAdd)
+	{
+		if (morphs.contains(MorphName) && !morphsToExport.contains(morphs[MorphName]))
+		{
+			morphsToExport.append(morphs[MorphName]);
+		}
+	}
+	RefreshExportMorphList();
+}
+
+// Hard coded list of morphs for Genesis 8.1 and ARKit
+// It just adds them all, the other functions will ignore any that don't fit the character
+void DzUnrealMorphSelectionDialog::HandleARKitGenesis81MorphsButton()
+{
+	QStringList MorphsToAdd;
+
+	MorphsToAdd.append("facs_jnt_EyeWideLeft");
+	MorphsToAdd.append("facs_jnt_EyeWideRight");
+	MorphsToAdd.append("facs_jnt_EyeBlinkLeft");
+	MorphsToAdd.append("facs_jnt_EyeBlinkRight");
+	MorphsToAdd.append("facs_bs_EyeSquintLeft_div2");
+	MorphsToAdd.append("facs_bs_EyeSquintRight_div2");
+	MorphsToAdd.append("facs_jnt_JawForward");
+	MorphsToAdd.append("facs_jnt_JawLeft");
+	MorphsToAdd.append("facs_jnt_JawRight");
+	MorphsToAdd.append("facs_jnt_JawOpen");
+	MorphsToAdd.append("facs_bs_MouthClose_div2");
+	MorphsToAdd.append("facs_bs_MouthFunnel_div2");
+	MorphsToAdd.append("facs_bs_MouthPucker_div2");
+	MorphsToAdd.append("facs_bs_MouthLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthRight_div2");
+	MorphsToAdd.append("facs_bs_MouthSmileLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthSmileRight_div2");
+	MorphsToAdd.append("facs_bs_MouthFrownLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthFrownRight_div2");
+	MorphsToAdd.append("facs_bs_MouthDimpleLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthDimpleRight_div2");
+	MorphsToAdd.append("facs_bs_MouthStretchLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthStretchRight_div2");
+	MorphsToAdd.append("facs_bs_MouthRollLower_div2");
+	MorphsToAdd.append("facs_bs_MouthRollUpper_div2");
+	MorphsToAdd.append("facs_bs_MouthShrugLower_div2");
+	MorphsToAdd.append("facs_bs_MouthShrugUpper_div2");
+	MorphsToAdd.append("facs_bs_MouthPressLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthPressRight_div2");
+	MorphsToAdd.append("facs_bs_MouthLowerDownLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthLowerDownRight_div2");
+	MorphsToAdd.append("facs_bs_MouthUpperUpLeft_div2");
+	MorphsToAdd.append("facs_bs_MouthUpperUpRight_div2");
+	MorphsToAdd.append("facs_bs_BrowDownLeft_div2");
+	MorphsToAdd.append("facs_bs_BrowDownRight_div2");
+	MorphsToAdd.append("facs_ctrl_BrowInnerUp");
+	MorphsToAdd.append("facs_bs_BrowOuterUpLeft_div2");
+	MorphsToAdd.append("facs_bs_BrowOuterUpRight_div2");
+	MorphsToAdd.append("facs_ctrl_CheekPuff");
+	MorphsToAdd.append("facs_bs_CheekSquintLeft_div2");
+	MorphsToAdd.append("facs_bs_CheekSquintRight_div2");
+	MorphsToAdd.append("facs_bs_NoseSneerLeft_div2");
+	MorphsToAdd.append("facs_bs_NoseSneerRight_div2");
+	MorphsToAdd.append("facs_bs_TongueOut");
+
 
 	// Add the list for export
 	foreach(QString MorphName, MorphsToAdd)

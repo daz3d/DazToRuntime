@@ -29,10 +29,12 @@ protected:
 	 QString MorphString;
 	 QString FBXVersion;
 	 QMap<QString,QString> MorphMapping;
+	 QList<QString> PoseList;
 
 	 bool ExportMorphs;
 	 bool ExportSubdivisions;
 	 bool ShowFbxDialog;
+	 bool ExportMaterialPropertiesCSV;
 	 DzNode* Selection;
 
 	 virtual QString getActionGroup() const { return tr("Bridges"); }
@@ -54,4 +56,9 @@ protected:
 	 // During Environment export props need to get disconnected as they are exported.
 	 void DisconnectNode(DzNode* Node, QList<AttachmentInfo>& AttachmentList);
 	 void ReconnectNodes(QList<AttachmentInfo>& AttachmentList);
+
+	 // During Skeletal Mesh Export Disconnect Override Controllers
+	 QList<QString> DisconnectOverrideControllers();
+	 void ReconnectOverrideControllers(QList<QString>& DisconnetedControllers);
+	 QList<QString> ControllersToDisconnect;
 };

@@ -81,6 +81,7 @@ void DzUnrealAction::executeAction()
 		  ExportSubdivisions = dlg->subdivisionEnabledCheckBox->isChecked();
 		  MorphMapping = dlg->GetMorphMapping();
 		  ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
+		  ExportMaterialPropertiesCSV = dlg->exportMaterialPropertyCSVCheckBox->isChecked();
 		  SubdivisionDialog = DzUnrealSubdivisionDialog::Get(dlg);
 		  SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
 		  FBXVersion = dlg->fbxVersionCombo->currentText();
@@ -103,9 +104,28 @@ void DzUnrealAction::WriteConfiguration()
 
 	 if (AssetType != "Environment")
 	 {
-		 writer.startMemberArray("Materials", true);
-		 WriteMaterials(Selection, writer);
-		 writer.finishArray();
+		 if (ExportMaterialPropertiesCSV)
+		 {
+			 QString filename = CharacterFolder + CharacterName + "_Maps.csv";
+			 QFile file(filename);
+			 file.open(QIODevice::WriteOnly);
+			 QTextStream stream(&file);
+			 stream << "Version, Object, Material, Type, Color, Opacity, File" << endl;
+
+			 writer.startMemberArray("Materials", true);
+			 WriteMaterials(Selection, writer, stream);
+			 writer.finishArray();
+		 }
+		 else
+		 {
+			 QString throwaway;
+			 QTextStream stream(&throwaway);
+			 writer.startMemberArray("Materials", true);
+			 WriteMaterials(Selection, writer, stream);
+			 writer.finishArray();
+		 }
+
+
 
 		 writer.startMemberArray("Morphs", true);
 		 if (ExportMorphs)
@@ -127,6 +147,22 @@ void DzUnrealAction::WriteConfiguration()
 			 SubdivisionDialog->WriteSubdivisions(writer);
 
 		 writer.finishArray();
+	 }
+
+	 if (AssetType == "Pose")
+	 {
+		 writer.startMemberArray("Poses", true);
+
+		for (QList<QString>::iterator i = PoseList.begin(); i != PoseList.end(); ++i)
+		{
+			writer.startObject(true);
+			writer.addMember("Name", *i);
+			writer.addMember("Label", MorphMapping[*i]);
+			writer.finishObject();
+		}
+
+		 writer.finishArray();
+
 	 }
 
 	 if (AssetType == "Environment")
@@ -157,7 +193,7 @@ void DzUnrealAction::SetExportOptions(DzFileIOSettings& ExportOptions)
 }
 
 // Write out all the surface properties
-void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
+void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer, QTextStream& Stream)
 {
 	 DzObject* Object = Node->getObject();
 	 DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
@@ -183,7 +219,11 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 						  Writer.addMember("Data Type", QString("String"));
 						  Writer.addMember("Texture", QString(""));
 						  Writer.finishObject();
-						  //Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << "Asset Type" << ", " << presentationType << ", " << "String" << ", " << "" << endl;
+
+						  if (ExportMaterialPropertiesCSV)
+						  {
+							  Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << "Asset Type" << ", " << presentationType << ", " << "String" << ", " << "" << endl;
+						  }
 					 }
 
 					 for (int propertyIndex = 0; propertyIndex < Material->getNumProperties(); propertyIndex++)
@@ -210,8 +250,11 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 								Writer.addMember("Data Type", QString("Texture"));
 								Writer.addMember("Texture", TextureName);
 								Writer.finishObject();
+								if (ExportMaterialPropertiesCSV)
+								{
+									Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << Name << ", " << Material->getDiffuseColor().name() << ", " << "Texture" << ", " << TextureName << endl;
+								}
 								continue;
-								//Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << Name << ", " << Material->getDiffuseColor().name() << ", " << "Texture" << ", " << TextureName << endl;
 						  }
 
 						  DzColorProperty* ColorProperty = qobject_cast<DzColorProperty*>(Property);
@@ -235,7 +278,10 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 								Writer.addMember("Data Type", QString("Color"));
 								Writer.addMember("Texture", TextureName);
 								Writer.finishObject();
-								//Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << Name << ", " << ColorProperty->getColorValue().name() << ", " << "Color" << ", " << TextureName << endl;
+								if (ExportMaterialPropertiesCSV)
+								{
+									Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << Name << ", " << ColorProperty->getColorValue().name() << ", " << "Color" << ", " << TextureName << endl;
+								}
 								continue;
 						  }
 
@@ -260,7 +306,10 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 								Writer.addMember("Data Type", QString("Double"));
 								Writer.addMember("Texture", TextureName);
 								Writer.finishObject();
-								//Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << Name << ", " << NumericProperty->getDoubleValue() << ", " << "Double" << ", " << TextureName << endl;
+								if (ExportMaterialPropertiesCSV)
+								{
+									Stream << "2, " << Node->getLabel() << ", " << Material->getName() << ", " << Material->getMaterialName() << ", " << Name << ", " << NumericProperty->getDoubleValue() << ", " << "Double" << ", " << TextureName << endl;
+								}
 						  }
 					 }
 				}
@@ -271,7 +320,7 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
 	 while (Iterator.hasNext())
 	 {
 		  DzNode* Child = Iterator.next();
-		  WriteMaterials(Child, Writer);
+		  WriteMaterials(Child, Writer, Stream);
 	 }
 }
 
