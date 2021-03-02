@@ -98,7 +98,7 @@ private:
 	UObject* ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName);
 
 	/** Function for creating the Material Instances for the model*/
-	bool CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType);
+	//bool CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType);
 
 	/** Set material properties that will be set on the Material Instances*/
 	void SetMaterialProperty(const FString& MaterialName, const FString& PropertyName, const FString& PropertyType, const FString& PropertyValue, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties);

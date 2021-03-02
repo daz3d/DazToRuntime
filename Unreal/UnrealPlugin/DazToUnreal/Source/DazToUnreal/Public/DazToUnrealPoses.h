@@ -7,5 +7,5 @@
 class FDazToUnrealPoses
 {
 public:
-	static void CreatePoseAsset(UAnimSequence* SourceAnimation, TArray<FString> PoseNames);
+	static UPoseAsset* CreatePoseAsset(UAnimSequence* SourceAnimation, TArray<FString> PoseNames);
 };
