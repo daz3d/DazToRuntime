@@ -89,7 +89,7 @@ public:
 		MaterialPropertyMapping.Add(TEXT("Specular Strength Texture Active"), TEXT("Glossy Layered Weight Texture Active"));
 
 		DefaultSkinDiffuseSubsurfaceColorWeight = 0.5f;
-		DefaultEyeMoistureOpacity = 0.04f;
+		DefaultEyeMoistureOpacity = 0.01f;
 	}
 
 	virtual FName GetCategoryName() const { return FName(TEXT("Plugins")); }
