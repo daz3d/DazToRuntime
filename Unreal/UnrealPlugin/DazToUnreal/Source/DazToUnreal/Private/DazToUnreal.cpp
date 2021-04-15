@@ -1489,6 +1489,8 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->bImportMaterials = false;
 		  FbxFactory->ImportUI->bImportTextures = false;
 		  FbxFactory->ImportUI->bImportAnimations = true;
+		  FbxFactory->ImportUI->AnimSequenceImportData->bConvertScene = true;
+		  FbxFactory->ImportUI->AnimSequenceImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_Animation;
 	 }
 	 //UFbxFactory::EnableShowOption();
