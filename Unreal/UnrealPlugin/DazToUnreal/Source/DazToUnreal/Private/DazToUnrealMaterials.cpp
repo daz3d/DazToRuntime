@@ -39,6 +39,15 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 
 	FString AssetType = "";
 	FString ShaderName = "";
+	FString Seperator;
+	if ( CachedSettings->UseOriginalMaterialName)
+	{
+		Seperator = "";
+	}
+	else
+	{
+		Seperator = "_";
+	}
 	TArray<FDUFTextureProperty> Properties = MaterialProperties;
 	for (FDUFTextureProperty Property : Properties)
 	{
@@ -59,14 +68,14 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	if (AssetType == TEXT("Follower/Hair"))
 	{
 		BaseMaterialAssetPath = CachedSettings->BaseHairMaterial;
-		if (MaterialName.EndsWith(TEXT("_scalp")))
+		if (MaterialName.EndsWith(Seperator + TEXT("scalp")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseScalpMaterial;
 		}
 	}
 	else if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes"))
 	{
-		if (MaterialName.Contains(TEXT("_EyeMoisture")))
+		if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 		}
@@ -76,60 +85,60 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		}
 	}
 	else if (AssetType == TEXT("Follower/Attachment/Lower-Body/Hip/Front") &&
-		MaterialName.Contains(TEXT("_Genitalia")))
+		MaterialName.Contains(Seperator + TEXT("Genitalia")))
 	{
 		BaseMaterialAssetPath = GetSkinMaterialForShader(ShaderName);
 	}
 	else if (AssetType == TEXT("Actor/Character"))
 	{
 		// Check for skin materials
-		if (MaterialName.EndsWith(TEXT("_Face")) ||
-			MaterialName.EndsWith(TEXT("_Head")) ||
-			MaterialName.EndsWith(TEXT("_Lips")) ||
-			MaterialName.EndsWith(TEXT("_Legs")) ||
-			MaterialName.EndsWith(TEXT("_Hips")) ||
-			MaterialName.EndsWith(TEXT("_Feet")) ||
-			MaterialName.EndsWith(TEXT("_Torso")) ||
-			MaterialName.EndsWith(TEXT("_Body")) ||
-			MaterialName.EndsWith(TEXT("_Neck")) ||
-			MaterialName.EndsWith(TEXT("_Shoulders")) ||
-			MaterialName.EndsWith(TEXT("_Arms")) ||
-			MaterialName.EndsWith(TEXT("_Forearms")) ||
-			MaterialName.EndsWith(TEXT("_Hands")) ||
-			MaterialName.EndsWith(TEXT("_EyeSocket")) ||
-			MaterialName.EndsWith(TEXT("_Ears")) ||
-			MaterialName.EndsWith(TEXT("_Fingernails")) ||
-			MaterialName.EndsWith(TEXT("_Toenails")) ||
-			MaterialName.EndsWith(TEXT("_Nipples")) ||
-			MaterialName.EndsWith(TEXT("_Genitalia")))
+		if (MaterialName.EndsWith(Seperator + TEXT("Face")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Head")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Lips")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Legs")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Hips")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Feet")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Torso")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Body")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Neck")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Shoulders")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Arms")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Forearms")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Hands")) ||
+			MaterialName.EndsWith(Seperator + TEXT("EyeSocket")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Ears")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Fingernails")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Toenails")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Nipples")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Genitalia")))
 		{
 			BaseMaterialAssetPath = GetSkinMaterialForShader(ShaderName);
 		}
-		else if (MaterialName.Contains(TEXT("_EyeMoisture")))
+		else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 		}
-		else if (MaterialName.Contains(TEXT("_EyeReflection")))
+		else if (MaterialName.Contains(Seperator + TEXT("EyeReflection")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 		}
-		else if (MaterialName.Contains(TEXT("_Tear")))
+		else if (MaterialName.Contains(Seperator + TEXT("Tear")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 		}
-		else if (MaterialName.EndsWith(TEXT("_EyeLashes")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("EyeLashes")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
 		}
-		else if (MaterialName.EndsWith(TEXT("_Eyelashes")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("Eyelashes")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
 		}
-		else if (MaterialName.EndsWith(TEXT("_Eyelash")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("Eyelash")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
 		}
-		else if (MaterialName.EndsWith(TEXT("_cornea")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("cornea")))
 		{
 			BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 		}
@@ -159,7 +168,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 			
 		}
 	}
-	else if (MaterialName.Contains(TEXT("_EyeMoisture")))
+	else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 	{
 		BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 	}
@@ -180,7 +189,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		}
 		
 	}
-	if (MaterialName.EndsWith(TEXT("_NoDraw")))
+	if (MaterialName.EndsWith(Seperator + TEXT("NoDraw")))
 	{
 		BaseMaterialAssetPath = CachedSettings->NoDrawMaterial;
 	}
@@ -212,13 +221,21 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			}
 		}
 	}
-
+	FString Seperator;
+	if ( CachedSettings->UseOriginalMaterialName)
+	{
+		Seperator = "";
+	}
+	else
+	{
+		Seperator = "_";
+	}
 	if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes") ||
 		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes") ||
 		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes/Tear") ||
 		AssetType == TEXT("Follower/Attachment/Head/Face/Tears"))
 	{
-		if (MaterialName.Contains(TEXT("_EyeMoisture")) || MaterialName.EndsWith(TEXT("_EyeReflection")))
+		if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")) || MaterialName.EndsWith(Seperator + TEXT("EyeReflection")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
@@ -226,7 +243,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			SetMaterialProperty(MaterialName, TEXT("Diffuse Color"), TEXT("Color"), TEXT("#bababa"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(TEXT("_Tear")) || MaterialName.EndsWith(TEXT("_Tears")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("Tear")) || MaterialName.EndsWith(Seperator + TEXT("Tears")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
@@ -241,7 +258,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		}
 	}
 	else if (AssetType == TEXT("Follower/Attachment/Lower-Body/Hip/Front") &&
-		MaterialName.Contains(TEXT("_Genitalia")))
+		MaterialName.Contains(Seperator + TEXT("Genitalia")))
 	{
 		//BaseMaterialAssetPath = CachedSettings->BaseSkinMaterial;
 		SetMaterialProperty(MaterialName, TEXT("Subsurface Alpha Texture"), TEXT("Texture"), FDazToUnrealTextures::GetSubSurfaceAlphaTexture(CharacterType, MaterialName), MaterialProperties);
@@ -249,61 +266,61 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 	else if (AssetType == TEXT("Actor/Character"))
 	{
 		// Check for skin materials
-		if (MaterialName.EndsWith(TEXT("_Face")) ||
-			MaterialName.EndsWith(TEXT("_Head")) ||
-			MaterialName.EndsWith(TEXT("_Lips")) ||
-			MaterialName.EndsWith(TEXT("_Legs")) ||
-			MaterialName.EndsWith(TEXT("_Torso")) ||
-			MaterialName.EndsWith(TEXT("_Body")) ||
-			MaterialName.EndsWith(TEXT("_Arms")) ||
-			MaterialName.EndsWith(TEXT("_EyeSocket")) ||
-			MaterialName.EndsWith(TEXT("_Ears")) ||
-			MaterialName.EndsWith(TEXT("_Fingernails")) ||
-			MaterialName.EndsWith(TEXT("_Toenails")) ||
-			MaterialName.EndsWith(TEXT("_Genitalia")))
+		if (MaterialName.EndsWith(Seperator + TEXT("Face")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Head")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Lips")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Legs")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Torso")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Body")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Arms")) ||
+			MaterialName.EndsWith(Seperator + TEXT("EyeSocket")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Ears")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Fingernails")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Toenails")) ||
+			MaterialName.EndsWith(Seperator + TEXT("Genitalia")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseSkinMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Diffuse Subsurface Color Weight"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultSkinDiffuseSubsurfaceColorWeight), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Subsurface Alpha Texture"), TEXT("Texture"), FDazToUnrealTextures::GetSubSurfaceAlphaTexture(CharacterType, MaterialName), MaterialProperties);
 		}
-		else if (MaterialName.Contains(TEXT("_EyeMoisture")))
+		else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(TEXT("_EyeReflection")) || MaterialName.EndsWith(TEXT("_Tear")) || MaterialName.EndsWith(TEXT("_Tears")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("EyeReflection")) || MaterialName.EndsWith(Seperator + TEXT("Tear")) || MaterialName.EndsWith(Seperator + TEXT("Tears")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(TEXT("_EyeLashes")) || MaterialName.EndsWith(TEXT("_Eyelashes")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("EyeLashes")) || MaterialName.EndsWith(Seperator + TEXT("Eyelashes")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Glossy Layered Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(TEXT("_cornea")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("cornea")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(TEXT("_sclera")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("sclera")))
 		{
 			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
 		}
-		else if (MaterialName.EndsWith(TEXT("_irises")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("irises")))
 		{
 			SetMaterialProperty(MaterialName, TEXT("Pixel Depth Offset"), TEXT("Double"), TEXT("0.1"), MaterialProperties);
 			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
 		}
-		else if (MaterialName.EndsWith(TEXT("_pupils")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("pupils")))
 		{
 			SetMaterialProperty(MaterialName, TEXT("Pixel Depth Offset"), TEXT("Double"), TEXT("0.1"), MaterialProperties);
 			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
@@ -324,7 +341,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			}
 		}
 	}
-	else if (MaterialName.Contains(TEXT("_EyeMoisture")))
+	else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 	{
 		//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 		SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
@@ -350,7 +367,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			}
 		}
 	}
-	if (MaterialName.EndsWith(TEXT("_NoDraw")))
+	if (MaterialName.EndsWith(Seperator + TEXT("NoDraw")))
 	{
 		//BaseMaterialAssetPath = CachedSettings->NoDrawMaterial;
 	}
@@ -619,6 +636,17 @@ FString FDazToUnrealMaterials::GetMaterialProperty(const FString& PropertyName, 
 
 USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(const FString CharacterMaterialFolder, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties)
 {
+	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
+	
+	FString Seperator;
+	if ( CachedSettings->UseOriginalMaterialName)
+	{
+		Seperator = "";
+	}
+	else
+	{
+		Seperator = "_";
+	}
 	// Find the torso material.
 	for (TPair<FString, TArray<FDUFTextureProperty>> Pair : MaterialProperties)
 	{
@@ -633,7 +661,7 @@ USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharact
 
 		if (AssetType == TEXT("Actor/Character"))
 		{
-			if (Pair.Key.EndsWith(TEXT("_Torso")) || Pair.Key.EndsWith(TEXT("_Body")))
+			if (Pair.Key.EndsWith(Seperator + TEXT("Torso")) || Pair.Key.EndsWith(Seperator + TEXT("Body")))
 			{
 				return CreateSubsurfaceProfileForMaterial(Pair.Key, CharacterMaterialFolder, Pair.Value);
 			}

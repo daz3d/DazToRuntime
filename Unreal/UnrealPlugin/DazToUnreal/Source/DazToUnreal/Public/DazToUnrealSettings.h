@@ -56,6 +56,7 @@ public:
 		BaseCorneaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
 		NoDrawMaterial = FSoftObjectPath(TEXT("/DazToUnreal/NoDrawMaterial.NoDrawMaterial"));
 
+		UseOriginalMaterialName = false;
 		UseInternalMorphName = false;
 
 		ArmsSubSurfaceOpacityGenesis1Texture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
@@ -201,6 +202,10 @@ public:
 	/** Default Opacity to use for EyeMoisture, Tears, etc */
 	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
 		float DefaultEyeMoistureOpacity;
+
+	/** Use Original Name of Material */
+	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
+		bool UseOriginalMaterialName;
 
 	/** Use the internal name rather than the display name when transfering morphs */
 	UPROPERTY(config, EditAnywhere, Category = MorphSettings)
