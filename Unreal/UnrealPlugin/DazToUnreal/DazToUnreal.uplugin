@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 4,
-	"VersionName": "4.2.0",
+	"VersionName": "4.1.0",
 	"FriendlyName": "DazToUnreal",
 	"Description": "",
 	"Category": "Importers",
@@ -11,8 +11,6 @@
 	"MarketplaceURL": "",
 	"SupportURL": "https://www.daz3d.com/help/",
 	"CanContainContent": true,
-	"IsBetaVersion": true,
-	"IsExperimentalVersion": false,
 	"Installed": true,
 	"Modules": [
 		{
