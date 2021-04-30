@@ -647,6 +647,7 @@ USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharact
 	{
 		Seperator = "_";
 	}
+
 	// Find the torso material.
 	for (TPair<FString, TArray<FDUFTextureProperty>> Pair : MaterialProperties)
 	{
