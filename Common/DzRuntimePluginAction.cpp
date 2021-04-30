@@ -33,7 +33,6 @@
 #include <QtNetwork/qudpsocket.h>
 #include <QtNetwork/qabstractsocket.h>
 #include <QtGui/qcheckbox.h>
-#include <QtGui/QMessageBox>
 
 
 #include "DzRuntimePluginAction.h"
@@ -122,16 +121,6 @@ void DzRuntimePluginAction::Export()
 	}
 	else if (AssetType == "Pose")
 	{
-		if (CheckIfPoseExportIsDestructive())
-		{
-			if (QMessageBox::question(0, tr("Continue"),
-				tr("Proceeding will delete keyed values on some properties. Continue?"),
-				QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
-			{
-				return;
-			}
-		}
-
 		PoseList.clear();
 		DzNode* Selection = dzScene->getPrimarySelection();
 		int poseIndex = 0;
@@ -176,7 +165,7 @@ void DzRuntimePluginAction::Export()
 						if (numericProperty)
 						{
 							QString propName = property->getName();
-							//qDebug() << propName;
+							qDebug() << propName;
 							if (MorphMapping.contains(modifier->getName()))
 							{
 								poseIndex++;
@@ -537,59 +526,6 @@ void DzRuntimePluginAction::ReconnectOverrideControllers(QList<QString>& Disconn
 
 		}
 	}
-}
-
-bool DzRuntimePluginAction::CheckIfPoseExportIsDestructive()
-{
-	DzNode* Selection = dzScene->getPrimarySelection();
-	int poseIndex = 0;
-	DzNumericProperty* previousProperty = nullptr;
-	for (int index = 0; index < Selection->getNumProperties(); index++)
-	{
-		DzProperty* property = Selection->getProperty(index);
-		DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
-		QString propName = property->getName();
-		if (numericProperty)
-		{
-			QString propName = property->getName();
-			if (MorphMapping.contains(propName))
-			{
-				if (!(numericProperty->getKeyRange().getEnd() == 0.0f && numericProperty->getDoubleValue(0.0f) == 0.0f)) return true;
-			}
-		}
-	}
-
-	DzObject* Object = Selection->getObject();
-	if (Object)
-	{
-		for (int index = 0; index < Object->getNumModifiers(); index++)
-		{
-			DzModifier* modifier = Object->getModifier(index);
-			DzMorph* mod = qobject_cast<DzMorph*>(modifier);
-			if (mod)
-			{
-				for (int propindex = 0; propindex < modifier->getNumProperties(); propindex++)
-				{
-					DzProperty* property = modifier->getProperty(propindex);
-					QString propName = property->getName();
-					QString propLabel = property->getLabel();
-					DzNumericProperty* numericProperty = qobject_cast<DzNumericProperty*>(property);
-					if (numericProperty)
-					{
-						QString propName = property->getName();
-						if (MorphMapping.contains(modifier->getName()))
-						{
-							if (!(numericProperty->getKeyRange().getEnd() == 0.0f && numericProperty->getDoubleValue(0.0f) == 0.0f)) return true;
-						}
-					}
-				}
-
-			}
-
-		}
-	}
-
-	return false;
 }
 
 #include "moc_DzRuntimePluginAction.cpp"

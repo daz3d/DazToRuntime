@@ -61,7 +61,4 @@ protected:
 	 QList<QString> DisconnectOverrideControllers();
 	 void ReconnectOverrideControllers(QList<QString>& DisconnetedControllers);
 	 QList<QString> ControllersToDisconnect;
-
-	 // For Pose exports check if writing to the timeline will alter existing keys
-	 bool CheckIfPoseExportIsDestructive();
 };
