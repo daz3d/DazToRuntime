@@ -456,12 +456,21 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 		  // Version 2 "Version, ObjectName, Material, Type, Color, Opacity, File"
 		  if (Version == 2)
-		  {
+		  {		
 				FString ObjectName = material->GetStringField(TEXT("Asset Name"));
 				ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
 				IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
 				FString ShaderName = material->GetStringField(TEXT("Material Type"));
-				FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
+				FString MaterialName;
+				if (CachedSettings->UseOriginalMaterialName)
+				{
+					 MaterialName = material->GetStringField(TEXT("Material Name"));
+				}
+				else
+				{
+					 MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
+				}
+				
 				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
 				FString TexturePath = material->GetStringField(TEXT("Texture"));
 				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
@@ -1143,7 +1152,16 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  //MaterialProperties.Add(MaterialName
 		  FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
 		  FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-		  FString NewMaterialName = AssetName + TEXT("_") + OriginalMaterialName;
+		  FString NewMaterialName;
+		  if (CachedSettings->UseOriginalMaterialName)
+		  {
+				 NewMaterialName = OriginalMaterialName;
+		  }
+		  else
+		  {
+				 NewMaterialName = AssetName + TEXT("_") + OriginalMaterialName;
+		  }
+		 
 		  NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
 		  Material->SetName(TCHAR_TO_UTF8(*NewMaterialName));
 		  if (MaterialProperties.Contains(NewMaterialName))
@@ -1489,6 +1507,8 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->bImportMaterials = false;
 		  FbxFactory->ImportUI->bImportTextures = false;
 		  FbxFactory->ImportUI->bImportAnimations = true;
+		  FbxFactory->ImportUI->AnimSequenceImportData->bConvertScene = true;
+		  FbxFactory->ImportUI->AnimSequenceImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_Animation;
 	 }
 	 //UFbxFactory::EnableShowOption();
