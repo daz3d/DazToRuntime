@@ -5,36 +5,26 @@
 FString FDazToUnrealTextures::GetSubSurfaceAlphaTexture(const DazCharacterType CharacterType, const FString& MaterialName)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
-	FString Seperator; 
-	if ( CachedSettings->UseOriginalMaterialName)
-	{
-		Seperator = "";
-	}
-	else
-	{
-		Seperator = "_";
-	}
 	if (CharacterType == DazCharacterType::Genesis8Male)
 	{
-
-		if (MaterialName.EndsWith(Seperator + TEXT("Arms")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Fingernails")))
+		if (MaterialName.EndsWith(TEXT("_Arms")) ||
+			MaterialName.EndsWith(TEXT("_Fingernails")))
 		{
 			return CachedSettings->ArmsSubSurfaceOpacityGenesis8MaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Face")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Lips")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Ears")))
+		if (MaterialName.EndsWith(TEXT("_Face")) ||
+			MaterialName.EndsWith(TEXT("_Lips")) ||
+			MaterialName.EndsWith(TEXT("_Ears")))
 		{
 			return CachedSettings->FaceSubSurfaceOpacityGenesis8MaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Torso")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Genitalia")))
+		if (MaterialName.EndsWith(TEXT("_Torso")) ||
+			MaterialName.EndsWith(TEXT("_Genitalia")))
 		{
 			return CachedSettings->TorsoSubSurfaceOpacityGenesis8MaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Legs")) ||
-			MaterialName.EndsWith(Seperator + TEXT("ToeNails")))
+		if (MaterialName.EndsWith(TEXT("_Legs")) ||
+			MaterialName.EndsWith(TEXT("_ToeNails")))
 		{
 			return CachedSettings->LegsSubSurfaceOpacityGenesis8MaleTexture.ToString();
 		}
@@ -42,24 +32,24 @@ FString FDazToUnrealTextures::GetSubSurfaceAlphaTexture(const DazCharacterType C
 
 	if (CharacterType == DazCharacterType::Genesis8Female)
 	{
-		if (MaterialName.EndsWith(Seperator + TEXT("Arms")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Fingernails")))
+		if (MaterialName.EndsWith(TEXT("_Arms")) ||
+			MaterialName.EndsWith(TEXT("_Fingernails")))
 		{
 			return CachedSettings->ArmsSubSurfaceOpacityGenesis8FemaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Face")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Lips")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Ears")))
+		if (MaterialName.EndsWith(TEXT("_Face")) ||
+			MaterialName.EndsWith(TEXT("_Lips")) ||
+			MaterialName.EndsWith(TEXT("_Ears")))
 		{
 			return CachedSettings->FaceSubSurfaceOpacityGenesis8FemaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Torso")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Genitalia")))
+		if (MaterialName.EndsWith(TEXT("_Torso")) ||
+			MaterialName.EndsWith(TEXT("_Genitalia")))
 		{
 			return CachedSettings->TorsoSubSurfaceOpacityGenesis8FemaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Legs")) ||
-			MaterialName.EndsWith(Seperator + TEXT("ToeNails")))
+		if (MaterialName.EndsWith(TEXT("_Legs")) ||
+			MaterialName.EndsWith(TEXT("_ToeNails")))
 		{
 			return CachedSettings->LegsSubSurfaceOpacityGenesis8FemaleTexture.ToString();
 		}
@@ -67,24 +57,24 @@ FString FDazToUnrealTextures::GetSubSurfaceAlphaTexture(const DazCharacterType C
 
 	if (CharacterType == DazCharacterType::Genesis3Male)
 	{
-		if (MaterialName.EndsWith(Seperator + TEXT("Arms")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Fingernails")))
+		if (MaterialName.EndsWith(TEXT("_Arms")) ||
+			MaterialName.EndsWith(TEXT("_Fingernails")))
 		{
 			return CachedSettings->ArmsSubSurfaceOpacityGenesis3MaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Face")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Lips")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Ears")))
+		if (MaterialName.EndsWith(TEXT("_Face")) ||
+			MaterialName.EndsWith(TEXT("_Lips")) ||
+			MaterialName.EndsWith(TEXT("_Ears")))
 		{
 			return CachedSettings->FaceSubSurfaceOpacityGenesis3MaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Torso")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Genitalia")))
+		if (MaterialName.EndsWith(TEXT("_Torso")) ||
+			MaterialName.EndsWith(TEXT("_Genitalia")))
 		{
 			return CachedSettings->TorsoSubSurfaceOpacityGenesis3MaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Legs")) ||
-			MaterialName.EndsWith(Seperator + TEXT("ToeNails")))
+		if (MaterialName.EndsWith(TEXT("_Legs")) ||
+			MaterialName.EndsWith(TEXT("_ToeNails")))
 		{
 			return CachedSettings->LegsSubSurfaceOpacityGenesis3MaleTexture.ToString();
 		}
@@ -92,24 +82,24 @@ FString FDazToUnrealTextures::GetSubSurfaceAlphaTexture(const DazCharacterType C
 
 	if (CharacterType == DazCharacterType::Genesis3Female)
 	{
-		if (MaterialName.EndsWith(Seperator + TEXT("Arms")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Fingernails")))
+		if (MaterialName.EndsWith(TEXT("_Arms")) ||
+			MaterialName.EndsWith(TEXT("_Fingernails")))
 		{
 			return CachedSettings->ArmsSubSurfaceOpacityGenesis3FemaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Face")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Lips")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Ears")))
+		if (MaterialName.EndsWith(TEXT("_Face")) ||
+			MaterialName.EndsWith(TEXT("_Lips")) ||
+			MaterialName.EndsWith(TEXT("_Ears")))
 		{
 			return CachedSettings->FaceSubSurfaceOpacityGenesis3FemaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Torso")) ||
-			MaterialName.EndsWith(Seperator + TEXT("Genitalia")))
+		if (MaterialName.EndsWith(TEXT("_Torso")) ||
+			MaterialName.EndsWith(TEXT("_Genitalia")))
 		{
 			return CachedSettings->TorsoSubSurfaceOpacityGenesis3FemaleTexture.ToString();
 		}
-		if (MaterialName.EndsWith(Seperator + TEXT("Legs")) ||
-			MaterialName.EndsWith(Seperator + TEXT("ToeNails")))
+		if (MaterialName.EndsWith(TEXT("_Legs")) ||
+			MaterialName.EndsWith(TEXT("_ToeNails")))
 		{
 			return CachedSettings->LegsSubSurfaceOpacityGenesis3FemaleTexture.ToString();
 		}

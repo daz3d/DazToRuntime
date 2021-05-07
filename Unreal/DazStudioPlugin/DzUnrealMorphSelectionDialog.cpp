@@ -77,7 +77,7 @@ DzUnrealMorphSelectionDialog::DzUnrealMorphSelectionDialog(QWidget *parent) :
 	setWindowTitle(tr("Select Morphs"));
 
 	// Setup folder
-	presetsFolder = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DAZ 3D"+ QDir::separator() + "Bridges" + QDir::separator() + "Daz To Unreal" + QDir::separator() + "Presets";
+	presetsFolder = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal" + QDir::separator() + "Presets";
 
 
 	QVBoxLayout* mainLayout = new QVBoxLayout(this);
@@ -121,32 +121,23 @@ DzUnrealMorphSelectionDialog::DzUnrealMorphSelectionDialog(QWidget *parent) :
 	treeLayout->addWidget(morphTreeWidget);
 
 	// Buttons for quickly adding certain JCMs
-	QGroupBox* MorphGroupBox = new QGroupBox("Morph Utilities", this);
-	MorphGroupBox->setLayout(new QVBoxLayout(this));
 	QGroupBox* JCMGroupBox = new QGroupBox("Add JCMs", this);
 	JCMGroupBox->setLayout(new QGridLayout(this));
-	QGroupBox* FaceGroupBox = new QGroupBox("Add Expressions", this);
-	FaceGroupBox->setLayout(new QGridLayout(this));
 	QPushButton* ArmsJCMButton = new QPushButton("Arms");
 	QPushButton* LegsJCMButton = new QPushButton("Legs");
 	QPushButton* TorsoJCMButton = new QPushButton("Torso");
-	QPushButton* ARKit81Button = new QPushButton("ARKit (Genesis8.1)");
-	QPushButton* FaceFX8Button = new QPushButton("FaceFX (Genesis8)");
+	QPushButton* ARKit81Button = new QPushButton("ARKit(Genesis8.1)");
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(ArmsJCMButton, 0, 0);
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(LegsJCMButton, 0, 1);
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(TorsoJCMButton, 0, 2);
-	((QGridLayout*)FaceGroupBox->layout())->addWidget(ARKit81Button, 0, 1);
-	((QGridLayout*)FaceGroupBox->layout())->addWidget(FaceFX8Button, 0, 2);
-	MorphGroupBox->layout()->addWidget(JCMGroupBox);
-	MorphGroupBox->layout()->addWidget(FaceGroupBox);
-	
+	((QGridLayout*)JCMGroupBox->layout())->addWidget(ARKit81Button, 1, 0);
+
 	connect(ArmsJCMButton, SIGNAL(released()), this, SLOT(HandleArmJCMMorphsButton()));
 	connect(LegsJCMButton, SIGNAL(released()), this, SLOT(HandleLegJCMMorphsButton()));
 	connect(TorsoJCMButton, SIGNAL(released()), this, SLOT(HandleTorsoJCMMorphsButton()));
 	connect(ARKit81Button, SIGNAL(released()), this, SLOT(HandleARKitGenesis81MorphsButton()));
-	connect(FaceFX8Button, SIGNAL(released()), this, SLOT(HandleFaceFXGenesis8Button()));
 	
-	treeLayout->addWidget(MorphGroupBox);
+	treeLayout->addWidget(JCMGroupBox);
 	morphsLayout->addLayout(treeLayout);
 
 
@@ -672,30 +663,6 @@ void DzUnrealMorphSelectionDialog::HandleARKitGenesis81MorphsButton()
 	MorphsToAdd.append("facs_bs_NoseSneerRight_div2");
 	MorphsToAdd.append("facs_bs_TongueOut");
 
-
-	// Add the list for export
-	foreach(QString MorphName, MorphsToAdd)
-	{
-		if (morphs.contains(MorphName) && !morphsToExport.contains(morphs[MorphName]))
-		{
-			morphsToExport.append(morphs[MorphName]);
-		}
-	}
-	RefreshExportMorphList();
-}
-
-void DzUnrealMorphSelectionDialog::HandleFaceFXGenesis8Button()
-{
-	QStringList MorphsToAdd;
-
-	MorphsToAdd.append("eCTRLvSH");
-	MorphsToAdd.append("eCTRLvW");
-	MorphsToAdd.append("eCTRLvM");
-	MorphsToAdd.append("eCTRLvF");
-	MorphsToAdd.append("eCTRLMouthOpen");
-	MorphsToAdd.append("eCTRLMouthWide-Narrow"); 
-	MorphsToAdd.append("eCTRLTongueIn-Out");
-	MorphsToAdd.append("eCTRLTongueUp-Down");
 
 	// Add the list for export
 	foreach(QString MorphName, MorphsToAdd)
