@@ -61,6 +61,7 @@ class FDazToUnrealFbx
 public:
 	static void RenameDuplicateBones(FbxNode* RootNode);
 	static void FixClusterTranformLinks(FbxScene* Scene, FbxNode* RootNode);
+	static void RemoveBindPoses(FbxScene* Scene);
 	static void AddWeightsToAllNodes(FbxNode* Parent);
 private:
 	static void RenameDuplicateBones(FbxNode* RootNode, TMap<FString, int>& ExistingBones);

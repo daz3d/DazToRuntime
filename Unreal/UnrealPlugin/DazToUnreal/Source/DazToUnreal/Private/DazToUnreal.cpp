@@ -579,6 +579,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
 	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
 	 {
+		FDazToUnrealFbx::RemoveBindPoses(Scene);
 		FDazToUnrealFbx::FixClusterTranformLinks(Scene, RootBone);
 	 }
 
