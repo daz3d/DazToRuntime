@@ -633,6 +633,16 @@ void DzUnrealMorphSelectionDialog::HandleARKitGenesis81MorphsButton()
 	MorphsToAdd.append("facs_jnt_EyeBlinkRight");
 	MorphsToAdd.append("facs_bs_EyeSquintLeft_div2");
 	MorphsToAdd.append("facs_bs_EyeSquintRight_div2");
+	MorphsToAdd.append("facs_ctrl_EyeLookUpRight");
+	MorphsToAdd.append("facs_ctrl_EyeLookUpLeft");
+	MorphsToAdd.append("facs_ctrl_EyeLookOutRight");
+	MorphsToAdd.append("facs_ctrl_EyeLookOutLeft");
+	MorphsToAdd.append("facs_ctrl_EyeLookInRight");
+	MorphsToAdd.append("facs_ctrl_EyeLookInLeft");
+	MorphsToAdd.append("facs_ctrl_EyeLookDownRight");
+	MorphsToAdd.append("facs_ctrl_EyeLookDownLeft");
+	MorphsToAdd.append("facs_bs_NoseSneerRight_div2");
+    MorphsToAdd.append("facs_bs_NoseSneerLeft_div2");
 	MorphsToAdd.append("facs_jnt_JawForward");
 	MorphsToAdd.append("facs_jnt_JawLeft");
 	MorphsToAdd.append("facs_jnt_JawRight");
