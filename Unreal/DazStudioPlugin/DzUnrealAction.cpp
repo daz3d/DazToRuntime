@@ -69,24 +69,34 @@ void DzUnrealAction::executeAction()
 	 // If the Accept button was pressed, start the export
 	 if (dlg->exec() == QDialog::Accepted)
 	 {
-		  // Collect the values from the dialog fields
-		  CharacterName = dlg->assetNameEdit->text();
-		  ImportFolder = dlg->intermediateFolderEdit->text();
-		  CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
-		  CharacterFBX = CharacterFolder + CharacterName + ".fbx";
-		  AssetType = dlg->assetTypeCombo->currentText().replace(" ", "");
-		  MorphString = dlg->GetMorphString();
-		  Port = dlg->portEdit->text().toInt();
-		  ExportMorphs = dlg->morphsEnabledCheckBox->isChecked();
-		  ExportSubdivisions = dlg->subdivisionEnabledCheckBox->isChecked();
-		  MorphMapping = dlg->GetMorphMapping();
-		  ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
-		  ExportMaterialPropertiesCSV = dlg->exportMaterialPropertyCSVCheckBox->isChecked();
-		  SubdivisionDialog = DzUnrealSubdivisionDialog::Get(dlg);
-		  SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
-		  FBXVersion = dlg->fbxVersionCombo->currentText();
+		 // Collect the values from the dialog fields
+		 CharacterName = dlg->assetNameEdit->text();
+		 ImportFolder = dlg->intermediateFolderEdit->text();
+		 CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
+		 CharacterFBX = CharacterFolder + CharacterName + ".fbx";
+		 AssetType = dlg->assetTypeCombo->currentText().replace(" ", "");
+		 MorphString = dlg->GetMorphString();
+		 Port = dlg->portEdit->text().toInt();
+		 ExportMorphs = dlg->morphsEnabledCheckBox->isChecked();
+		 ExportSubdivisions = dlg->subdivisionEnabledCheckBox->isChecked();
+		 MorphMapping = dlg->GetMorphMapping();
+		 ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
+		 ExportMaterialPropertiesCSV = dlg->exportMaterialPropertyCSVCheckBox->isChecked();
+		 SubdivisionDialog = DzUnrealSubdivisionDialog::Get(dlg);
+		 FBXVersion = dlg->fbxVersionCombo->currentText();
 
-		  Export();
+		 if (AssetType == "SkeletalMesh" && ExportSubdivisions)
+		 {
+			 // export base mesh
+			 ExportBaseMesh = true;
+			 SubdivisionDialog->LockSubdivisionProperties(false);
+			 Export();
+		 }
+
+		 ExportBaseMesh = false;
+		 SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
+		 Export();
+
 	 }
 }
 
@@ -177,6 +187,14 @@ void DzUnrealAction::WriteConfiguration()
 	 writer.finishObject();
 
 	 DTUfile.close();
+
+	 if (AssetType != "Environment" && ExportSubdivisions)
+	 {
+		 QString CMD = "ImportFBXScene " + DTUfilename;
+		 QByteArray array = CMD.toLocal8Bit();
+		 char* cmd = array.data();
+		 int res = system(cmd);
+	 }
 
 	 // Send a message to Unreal telling it to start an import
 	 QUdpSocket* sendSocket = new QUdpSocket(this);
