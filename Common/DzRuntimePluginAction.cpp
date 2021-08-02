@@ -310,7 +310,7 @@ void DzRuntimePluginAction::ExportNode(DzNode* Node)
 		  }
 		  ExportOptions.setBoolValue("doLights", false);
 		  ExportOptions.setBoolValue("doCameras", false);
-		  ExportOptions.setBoolValue("doAnims", true);
+		  ExportOptions.setBoolValue("doAnims", false);
 		  if ((AssetType == "Animation" || AssetType == "SkeletalMesh") && ExportMorphs && MorphString != "")
 		  {
 				ExportOptions.setBoolValue("doMorphs", true);
@@ -354,9 +354,29 @@ void DzRuntimePluginAction::ExportNode(DzNode* Node)
 		  dir.mkpath(CharacterFolder);
 
 		  SetExportOptions(ExportOptions);
-		  Exporter->writeFile(CharacterFBX, &ExportOptions);
 
-		  WriteConfiguration();
+		  if (ExportSubdivisions)
+		  {
+			  if (ExportBaseMesh)
+			  {
+				  QString CharacterBaseFBX = CharacterFBX;
+				  CharacterBaseFBX.replace(".fbx", "_base.fbx");
+				  Exporter->writeFile(CharacterBaseFBX, &ExportOptions);
+			  }
+			  else
+			  {
+				  QString CharacterHDFBX = CharacterFBX;
+				  CharacterHDFBX.replace(".fbx", "_HD.fbx");
+				  Exporter->writeFile(CharacterHDFBX, &ExportOptions);
+
+				  WriteConfiguration();
+			  }
+		  }
+		  else
+		  {
+			  Exporter->writeFile(CharacterFBX, &ExportOptions);
+			  WriteConfiguration();
+		  }
 
 		  // Change back material names
 		  UndoRenameDuplicateMaterials(Parent, MaterialNames, OriginalMaterialNames);
