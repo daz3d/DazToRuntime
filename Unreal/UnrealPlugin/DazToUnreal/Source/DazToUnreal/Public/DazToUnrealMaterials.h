@@ -40,4 +40,7 @@ public:
 	static USubsurfaceProfile* CreateSubsurfaceProfileForMaterial(const FString MaterialName, const FString CharacterMaterialFolder, const TArray<FDUFTextureProperty > MaterialProperties);
 	static bool SubsurfaceProfilesAreIdentical(USubsurfaceProfile* A, USubsurfaceProfile* B);
 	static bool SubsurfaceProfilesWouldBeIdentical(USubsurfaceProfile* ExistingSubsurfaceProfile, const TArray<FDUFTextureProperty > MaterialProperties);
+	static void ImportMaterial(TSharedPtr<FJsonObject> JsonObject);
+	static bool ImportTextureAssets(TArray<FString>& SourcePaths, FString& ImportLocation);
+	
 };

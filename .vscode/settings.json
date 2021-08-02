@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.dsa": "javascript",
+        "*.pyp": "python",
+        "*.rh": "cpp"
+    }
+}

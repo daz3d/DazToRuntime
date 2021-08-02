@@ -102,7 +102,8 @@ void DzUnrealAction::WriteConfiguration()
 	 writer.addMember("FBX File", CharacterFBX);
 	 writer.addMember("Import Folder", CharacterFolder);
 
-	 if (AssetType != "Environment")
+	 if (AssetType != "Environment" 
+		 || AssetType != "Material")
 	 {
 		 if (ExportMaterialPropertiesCSV)
 		 {
@@ -171,6 +172,15 @@ void DzUnrealAction::WriteConfiguration()
 		 QMap<QString, DzMatrix3> WritingInstances;
 		 QList<DzGeometry*> ExportedGeometry;
 		 WriteInstances(Selection, writer, WritingInstances, ExportedGeometry);
+		 writer.finishArray();
+	 }
+
+	 if (AssetType == "Material")
+	 {
+		 QString throwaway;
+		 QTextStream stream(&throwaway);
+		 writer.startMemberArray("Materials", true);
+		 WriteMaterials(Selection, writer, stream);
 		 writer.finishArray();
 	 }
 

@@ -21,7 +21,8 @@ enum DazAssetType
 	StaticMesh,
 	Animation,
 	Environment,
-	Pose
+	Pose,
+	Material,
 };
 
 

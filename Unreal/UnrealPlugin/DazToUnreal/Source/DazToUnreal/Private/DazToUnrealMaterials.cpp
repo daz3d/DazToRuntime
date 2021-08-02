@@ -1,6 +1,7 @@
 #include "DazToUnrealMaterials.h"
 #include "DazToUnrealSettings.h"
 #include "DazToUnrealTextures.h"
+#include "DazToUnrealUtils.h"
 
 #include "Materials/MaterialInstanceConstant.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
@@ -8,7 +9,7 @@
 #include "Engine/SubsurfaceProfile.h"
 #include "AssetRegistryModule.h"
 #include "AssetToolsModule.h"
-
+#include "Dom/JsonObject.h"
 FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterialForShader(FString ShaderName)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
@@ -743,4 +744,281 @@ bool FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(USubsurfaceProfil
 	if (ExistingSubsurfaceProfile->Settings.SubsurfaceColor != FColor::FromHex(*GetMaterialProperty(TEXT("SSS Color"), MaterialProperties))) return false;
 	if (ExistingSubsurfaceProfile->Settings.FalloffColor != FColor::FromHex(*GetMaterialProperty(TEXT("Transmitted Color"), MaterialProperties))) return false;
 	return true;
+}
+
+void FDazToUnrealMaterials::ImportMaterial(TSharedPtr<FJsonObject> JsonObject)
+{
+	TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
+
+	FString FBXPath = JsonObject->GetStringField(TEXT("FBX File"));
+	FString AssetName = FDazToUnrealUtils::SanitizeName(JsonObject->GetStringField(TEXT("Asset Name")));
+	FString ImportFolder = JsonObject->GetStringField(TEXT("Import Folder"));
+	FString ImportCharacterFolder = FPaths::GetPath(FBXPath);
+	FString ImportCharacterTexturesFolder = FPaths::GetPath(FBXPath) / TEXT("Textures");
+	FString ImportCharacterMaterialFolder = FPaths::GetPath(FBXPath) / TEXT("Materials");
+	FString FBXFile = FBXPath;
+
+	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
+
+	FString DAZImportFolder = CachedSettings->ImportDirectory.Path;
+	FString DAZAnimationImportFolder = CachedSettings->AnimationImportDirectory.Path;
+	FString CharacterFolder = DAZImportFolder / AssetName;
+	FString CharacterTexturesFolder = CharacterFolder / TEXT("Textures");
+	FString CharacterMaterialFolder = CharacterFolder / TEXT("Materials");
+
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+	// Use the maps file to find the textures to load
+	TMap<FString, FString> TextureFileSourceToTarget;
+	TArray<FString> IntermediateMaterials;
+	TArray<FString> MaterialNames;
+	TArray<TSharedPtr<FJsonValue>> matList = JsonObject->GetArrayField(TEXT("Materials"));
+	for (int32 i = 0; i < matList.Num(); i++)
+	{
+		TSharedPtr<FJsonObject> material = matList[i]->AsObject();
+		int32 Version = material->GetIntegerField(TEXT("Version"));
+
+		// Version 1 "Version, Material, Type, Color, Opacity, File"
+		if (Version == 1)
+		{
+			FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
+			MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
+			FString TexturePath = material->GetStringField(TEXT("Texture"));
+			FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
+
+			if (!MaterialProperties.Contains(MaterialName))
+			{
+				MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
+				MaterialNames.Add(MaterialName);
+			}
+			FDUFTextureProperty Property;
+			Property.Name = material->GetStringField(TEXT("Name"));
+			Property.Type = material->GetStringField(TEXT("Data Type"));
+			Property.Value = material->GetStringField(TEXT("Value"));
+			if (Property.Type == TEXT("Texture"))
+			{
+				Property.Type = TEXT("Color");
+			}
+
+			MaterialProperties[MaterialName].Add(Property);
+			if (!TextureName.IsEmpty())
+			{
+				// If a texture is attached add a texture property
+				FDUFTextureProperty TextureProperty;
+				TextureProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture");
+				TextureProperty.Type = TEXT("Texture");
+
+				if (!TextureFileSourceToTarget.Contains(TexturePath))
+				{
+					int32 TextureCount = 0;
+					FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+					while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
+					{
+						TextureCount++;
+						NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+					}
+					TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
+				}
+
+				TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
+				MaterialProperties[MaterialName].Add(TextureProperty);
+				//TextureFiles.AddUnique(TexturePath);
+
+				// and a switch property for things like Specular that could come from different channels
+				FDUFTextureProperty SwitchProperty;
+				SwitchProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
+				SwitchProperty.Type = TEXT("Switch");
+				SwitchProperty.Value = TEXT("true");
+				MaterialProperties[MaterialName].Add(SwitchProperty);
+			}
+		}
+
+		// Version 2 "Version, ObjectName, Material, Type, Color, Opacity, File"
+		if (Version == 2)
+		{
+			FString ObjectName = material->GetStringField(TEXT("Asset Name"));
+			ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
+			IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
+			FString ShaderName = material->GetStringField(TEXT("Material Type"));
+			FString MaterialName = material->GetStringField(TEXT("Material Name"));
+			FString OgMaterialName = material->GetStringField(TEXT("Material Name"));
+			FString PropertyName = material->GetStringField(TEXT("Name"));
+			bool UseOriginalMat = CachedSettings->UseOriginalMaterialName;
+			MaterialName = FDazToUnrealUtils::MaterialName(MaterialName, AssetName, UseOriginalMat);
+
+			FString TexturePath = material->GetStringField(TEXT("Texture"));
+			FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
+
+			if (!MaterialProperties.Contains(MaterialName))
+			{
+				MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
+				MaterialNames.Add(MaterialName);
+			}
+			FDUFTextureProperty Property;
+			Property.Name = material->GetStringField(TEXT("Name"));
+			Property.Type = material->GetStringField(TEXT("Data Type"));
+			Property.Value = material->GetStringField(TEXT("Value"));
+			Property.ObjectName = ObjectName;
+			Property.ShaderName = ShaderName;
+			if (Property.Type == TEXT("Texture"))
+			{
+				Property.Type = TEXT("Color");
+			}
+
+			// Properties that end with Enabled are switches for functionality
+			if (Property.Name.EndsWith(TEXT(" Enable")))
+			{
+				Property.Type = TEXT("Switch");
+				if (Property.Value == TEXT("0"))
+				{
+					Property.Value = TEXT("false");
+				}
+				else
+				{
+					Property.Value = TEXT("true");
+				}
+			}
+
+			MaterialProperties[MaterialName].Add(Property);
+			if (!TextureName.IsEmpty())
+			{
+				// If a texture is attached add a texture property
+				FDUFTextureProperty TextureProperty;
+				TextureProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture");
+				TextureProperty.Type = TEXT("Texture");
+				TextureProperty.ObjectName = ObjectName;
+				TextureProperty.ShaderName = ShaderName;
+
+				if (!TextureFileSourceToTarget.Contains(TexturePath))
+				{
+					int32 TextureCount = 0;
+					//FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+					FString NewTextureName = FDazToUnrealUtils::TextureName(OgMaterialName, PropertyName, AssetName);
+
+					//while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
+					//{
+					  //	TextureCount++;
+					  //	NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+					//}
+					TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
+				}
+
+				TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
+				MaterialProperties[MaterialName].Add(TextureProperty);
+				//TextureFiles.AddUnique(TexturePath);
+
+				// and a switch property for things like Specular that could come from different channels
+				FDUFTextureProperty SwitchProperty;
+				SwitchProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
+				SwitchProperty.Type = TEXT("Switch");
+				SwitchProperty.Value = TEXT("true");
+				SwitchProperty.ObjectName = ObjectName;
+				SwitchProperty.ShaderName = ShaderName;
+				MaterialProperties[MaterialName].Add(SwitchProperty);
+			}
+		}
+	}
+
+	TArray<FString> TexturesFilesToImport;
+	for (auto TexturePair : TextureFileSourceToTarget)
+	{
+		FString SourceFileName = TexturePair.Key;
+		FString TargetFileName = ImportCharacterTexturesFolder / TexturePair.Value + FPaths::GetExtension(SourceFileName, true);
+		PlatformFile.CopyFile(*TargetFileName, *SourceFileName);
+		TexturesFilesToImport.Add(TargetFileName);
+	}
+	FDazToUnrealMaterials::ImportTextureAssets(TexturesFilesToImport, CharacterTexturesFolder);
+
+	DazCharacterType CharacterType = DazCharacterType::Unknown;
+
+	// Create a default Master Subsurface Profile if needed
+	USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, MaterialProperties);
+
+	for (FString IntermediateMaterialName : IntermediateMaterials)
+	{
+		TArray<FString> ChildMaterials;
+		FString ChildMaterialFolder = CharacterMaterialFolder;
+		for (FString ChildMaterialName : MaterialNames)
+		{
+			if (MaterialProperties.Contains(ChildMaterialName))
+			{
+				for (FDUFTextureProperty ChildProperty : MaterialProperties[ChildMaterialName])
+				{
+					if ((ChildProperty.ObjectName + TEXT("_BaseMat")) == IntermediateMaterialName)
+					{
+						ChildMaterialFolder = CharacterMaterialFolder / ChildProperty.ObjectName;
+						ChildMaterials.AddUnique(ChildMaterialName);
+					}
+				}
+			}
+		}
+
+		if (ChildMaterials.Num() > 1)
+		{
+
+
+			// Copy Material Properties
+			TArray<FDUFTextureProperty> MostCommonProperties = FDazToUnrealMaterials::GetMostCommonProperties(ChildMaterials, MaterialProperties);
+			MaterialProperties.Add(IntermediateMaterialName, MostCommonProperties);
+			//MaterialProperties[IntermediateMaterialName] = MaterialProperties[ChildMaterials[0]];
+
+
+			// Create Material
+			FSoftObjectPath BaseMaterialPath = FDazToUnrealMaterials::GetMostCommonBaseMaterial(ChildMaterials, MaterialProperties);//FDazToUnrealMaterials::GetBaseMaterial(ChildMaterials[0], MaterialProperties[IntermediateMaterialName]);
+			UObject* BaseMaterial = BaseMaterialPath.TryLoad();
+			UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, nullptr, MasterSubsurfaceProfile);
+			UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
+			for (FString MaterialName : ChildMaterials)
+			{
+				USubsurfaceProfile* SubsurfaceProfile = MasterSubsurfaceProfile;
+				if (!FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(MasterSubsurfaceProfile, MaterialProperties[MaterialName]))
+				{
+					SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(MaterialName, ChildMaterialFolder, MaterialProperties[MaterialName]);
+				}
+
+				if (FDazToUnrealMaterials::GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]) == BaseMaterialPath)
+				{
+
+					int32 Length = MaterialProperties[MaterialName].Num();
+					for (int32 Index = Length - 1; Index >= 0; Index--)
+					{
+						FDUFTextureProperty ChildPropertyForRemoval = MaterialProperties[MaterialName][Index];
+						if (ChildPropertyForRemoval.Name == TEXT("Asset Type")) continue;
+						for (FDUFTextureProperty ParentProperty : MaterialProperties[IntermediateMaterialName])
+						{
+							if (ParentProperty.Name == ChildPropertyForRemoval.Name && ParentProperty.Value == ChildPropertyForRemoval.Value)
+							{
+								MaterialProperties[MaterialName].RemoveAt(Index);
+								break;
+							}
+						}
+					}
+
+					FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, UnrealMaterialConstant, SubsurfaceProfile);
+				}
+				else
+				{
+					FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
+				}
+			}
+		}
+		else if (ChildMaterials.Num() == 1)
+		{
+			USubsurfaceProfile* SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(ChildMaterials[0], CharacterMaterialFolder / ChildMaterials[0], MaterialProperties[ChildMaterials[0]]);
+			FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder / IntermediateMaterialName, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
+		}
+
+	}
+
+}
+
+bool FDazToUnrealMaterials::ImportTextureAssets(TArray<FString>& SourcePaths, FString& ImportLocation)
+{
+	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
+	TArray<UObject*> ImportedAssets = AssetToolsModule.Get().ImportAssets(SourcePaths, ImportLocation);
+	if (ImportedAssets.Num() > 0)
+	{
+		return true;
+	}
+	return false;
 }

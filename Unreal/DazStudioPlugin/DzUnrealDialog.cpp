@@ -90,6 +90,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	assetTypeCombo->addItem("Animation");
 	assetTypeCombo->addItem("Environment");
 	assetTypeCombo->addItem("Pose");
+	assetTypeCombo->addItem("Material");
 
 	// Morphs
 	QHBoxLayout* morphsLayout = new QHBoxLayout(this);

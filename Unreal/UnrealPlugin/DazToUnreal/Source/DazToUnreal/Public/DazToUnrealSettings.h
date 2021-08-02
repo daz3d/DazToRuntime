@@ -26,35 +26,35 @@ public:
 		ZeroRootRotationOnImport = false;
 
 		Genesis1Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis1BaseSkeleton.Genesis1BaseSkeleton"));
-		Genesis3Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton"));
-		Genesis8Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton"));
-		OtherSkeletons.Add(TEXT("Genesis8_1Male"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
-		OtherSkeletons.Add(TEXT("Genesis8_1Female"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
+		Genesis3Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis3/Genesis3BaseSkeleton.Genesis3BaseSkeleton"));
+		Genesis8Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis8/Genesis8BaseSkeleton.Genesis8BaseSkeleton"));
+		OtherSkeletons.Add(TEXT("Genesis8_1Male"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
+		OtherSkeletons.Add(TEXT("Genesis8_1Female"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
 
-		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C")));
-		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis8JCMPostProcess.Genesis8JCMPostProcess_C")));
+		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis3/Genesis3BaseSkeleton.Genesis3BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis3/Animation/Genesis3JCMPostProcess.Genesis3JCMPostProcess")));
+		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis8/Genesis8BaseSkeleton.Genesis8BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis8/Animation/Genesis8JCMPostProcess.Genesis8JCMPostProcess")));
 
-		BaseShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
-		BaseShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberBaseMaterial.omUberBaseMaterial")));
-		BaseShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceBaseMaterial.AoASubsurfaceBaseMaterial")));
-		BaseShaderMaterials.Add(TEXT("Iray Uber"), FSoftObjectPath(TEXT("/DazToUnreal/IrayUberBaseMaterial.IrayUberBaseMaterial")));
-		BaseShaderMaterials.Add(TEXT("PBRSkin"), FSoftObjectPath(TEXT("/DazToUnreal/BasePBRSkinMaterial.BasePBRSkinMaterial")));
+		BaseShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_DSDBase.M_DSDBase")));
+		BaseShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_omUberBase.M_omUberBase")));
+		BaseShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_AoASubsurfaceBase.M_AoASubsurfaceBase")));
+		BaseShaderMaterials.Add(TEXT("Iray Uber"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_IrayUberBase.M_IrayUberBase")));
+		BaseShaderMaterials.Add(TEXT("PBRSkin"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BasePBRSkin.M_BasePBRSkin")));
 
-		SkinShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
-		SkinShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberSkinMaterial.omUberSkinMaterial")));
-		SkinShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceSkinMaterial.AoASubsurfaceSkinMaterial")));
-		SkinShaderMaterials.Add(TEXT("Iray Uber"), FSoftObjectPath(TEXT("/DazToUnreal/IrayUberSkinMaterial.IrayUberSkinMaterial")));
-		SkinShaderMaterials.Add(TEXT("PBRSkin"), FSoftObjectPath(TEXT("/DazToUnreal/BasePBRSkinMaterial.BasePBRSkinMaterial")));
+		SkinShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_DSDBase.M_DSDBase")));
+		SkinShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_omUberSkin.M_omUberSkin")));
+		SkinShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_AoASubsurfaceSkin.M_AoASubsurfaceSkin")));
+		SkinShaderMaterials.Add(TEXT("Iray Uber"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_IrayUberSkin.M_IrayUberSkin")));
+		SkinShaderMaterials.Add(TEXT("PBRSkin"), FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BasePBRSkin.M_BasePBRSkin")));
 
-		BaseMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseMaterial.BaseMaterial"));
-		BaseAlphaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
-		BaseMaskedMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseMaskedMaterial.BaseMaskedMaterial"));
-		BaseSkinMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseSSSSkinMaterial.BaseSSSSkinMaterial"));
-		BaseHairMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseHairMaterial.BaseHairMaterial"));
-		BaseScalpMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseScalpMaterial.BaseScalpMaterial"));
-		BaseEyeMoistureMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
-		BaseCorneaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
-		NoDrawMaterial = FSoftObjectPath(TEXT("/DazToUnreal/NoDrawMaterial.NoDrawMaterial"));
+		BaseMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_Base.M_Base"));
+		BaseAlphaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BaseAlpha.M_BaseAlpha"));
+		BaseMaskedMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BaseMasked.M_BaseMasked"));
+		BaseSkinMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BaseSSSSkin.M_BaseSSSSkin"));
+		BaseHairMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BaseHair.M_BaseHair"));
+		BaseScalpMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BaseScalp.M_BaseScalp"));
+		BaseEyeMoistureMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BaseAlpha.M_BaseAlpha"));
+		BaseCorneaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_BaseAlpha.M_BaseAlpha"));
+		NoDrawMaterial = FSoftObjectPath(TEXT("/DazToUnreal/Materials/M_NoDraw.M_NoDraw"));
 
 		UseOriginalMaterialName = false;
 		UseInternalMorphName = false;
@@ -70,7 +70,7 @@ public:
 		TorsoSubSurfaceOpacityGenesis3MaleTexture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
 
 		ArmsSubSurfaceOpacityGenesis3FemaleTexture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
-		FaceSubSurfaceOpacityGenesis3FemaleTexture = FSoftObjectPath(TEXT("/DazToUnreal/SSSTextures/Genesis3Female/FaceSSSTransparency.FaceSSSTransparency"));
+		FaceSubSurfaceOpacityGenesis3FemaleTexture = FSoftObjectPath(TEXT("/DazToUnreal/Materials/SSSTextures/Genesis3Female/T_FaceSSSTransparency.FaceSSSTransparency"));
 		LegsSubSurfaceOpacityGenesis3FemaleTexture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
 		TorsoSubSurfaceOpacityGenesis3FemaleTexture = FSoftObjectPath(TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
 

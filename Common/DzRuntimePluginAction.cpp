@@ -120,6 +120,11 @@ void DzRuntimePluginAction::Export()
 		AssetType = "Environment";
 		ExportNode(Selection);
 	}
+	else if (AssetType == "Material")
+	{
+		DzNode* Selection = dzScene->getPrimarySelection();
+		ExportNode(Selection);
+	}
 	else if (AssetType == "Pose")
 	{
 		if (CheckIfPoseExportIsDestructive())
@@ -268,6 +273,14 @@ void DzRuntimePluginAction::ExportNode(DzNode* Node)
 {
 	dzScene->selectAllNodes(false);
 	 dzScene->setPrimarySelection(Node);
+
+	 if (AssetType == "Material")
+	 {
+		 QDir dir;
+		 dir.mkpath(CharacterFolder);
+		 WriteConfiguration();
+		 return;
+	 }
 
 	 if (AssetType == "Environment")
 	 {

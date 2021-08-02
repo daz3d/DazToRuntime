@@ -328,7 +328,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 AssetType = DazAssetType::Environment;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Pose"))
 		 AssetType = DazAssetType::Pose;
-
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Material"))
+		 AssetType = DazAssetType::Material;
 	 // Set up the folder paths
 	 FString ImportDirectory = FPaths::ProjectDir() / TEXT("Import");
 	 if (!ImportFolder.IsEmpty())
@@ -372,6 +373,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 if (AssetType == DazAssetType::Environment)
 	 {
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
+		 return nullptr;
+	 }
+
+	 if (AssetType == DazAssetType::Material)
+	 {	 
+		 FDazToUnrealMaterials::ImportMaterial(JsonObject);
 		 return nullptr;
 	 }
 
@@ -461,17 +468,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
 				IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
 				FString ShaderName = material->GetStringField(TEXT("Material Type"));
-				FString MaterialName;
-				if (CachedSettings->UseOriginalMaterialName)
-				{
-					 MaterialName = material->GetStringField(TEXT("Material Name"));
-				}
-				else
-				{
-					 MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
-				}
-				
-				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
+				FString MaterialName = material->GetStringField(TEXT("Material Name"));
+				FString OgMaterialName = material->GetStringField(TEXT("Material Name"));
+				FString PropertyName = material->GetStringField(TEXT("Name"));
+				bool UseOriginalMat = CachedSettings->UseOriginalMaterialName;
+				MaterialName = FDazToUnrealUtils::MaterialName(MaterialName, AssetName, UseOriginalMat);
+
 				FString TexturePath = material->GetStringField(TEXT("Texture"));
 				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
 
@@ -517,12 +519,14 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 if (!TextureFileSourceToTarget.Contains(TexturePath))
 					 {
 						  int32 TextureCount = 0;
-						  FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
-						  while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
-						  {
-								TextureCount++;
-								NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
-						  }
+						  //FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+						  FString NewTextureName = FDazToUnrealUtils::TextureName(OgMaterialName, PropertyName, AssetName);
+						  
+						  //while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
+						  //{
+							//	TextureCount++;
+							//	NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+						  //}
 						  TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
 					 }
 
@@ -540,6 +544,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 MaterialProperties[MaterialName].Add(SwitchProperty);
 				}
 		  }
+
 	 }
 
 	 // Load the FBX file
@@ -1153,17 +1158,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  //MaterialProperties.Add(MaterialName
 		  FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
 		  FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+		  bool UseOriginalMat = CachedSettings->UseOriginalMaterialName;
 		  FString NewMaterialName;
-		  if (CachedSettings->UseOriginalMaterialName)
-		  {
-				 NewMaterialName = OriginalMaterialName;
-		  }
-		  else
-		  {
-				 NewMaterialName = AssetName + TEXT("_") + OriginalMaterialName;
-		  }
-		 
-		  NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
+		  NewMaterialName = FDazToUnrealUtils::MaterialName(OriginalMaterialName, AssetName, UseOriginalMat);
 		  Material->SetName(TCHAR_TO_UTF8(*NewMaterialName));
 		  if (MaterialProperties.Contains(NewMaterialName))
 		  {
