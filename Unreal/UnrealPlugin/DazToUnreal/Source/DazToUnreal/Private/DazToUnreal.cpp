@@ -733,7 +733,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 RootNode->AddChild(SceneNode);
 				}
 		  }
-#if 1
+#if 0 // Do not create missing weights
 		  if (SubdivisionLevels.Num() > 0)
 		  {
 				// Create missing weights

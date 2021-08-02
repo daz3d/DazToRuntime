@@ -149,6 +149,7 @@ void DzUnrealSubdivisionDialog::CreateList(DzNode* Node)
 		subdivisionLevelCombo->setProperty("Object", QVariant(Node->getName()));
 		subdivisionLevelCombo->addItem("0");
 		subdivisionLevelCombo->addItem("1");
+		subdivisionLevelCombo->addItem("2");
 		SubdivisionCombos.append(subdivisionLevelCombo);
 		subdivisionItemsGrid->addWidget(subdivisionLevelCombo, row, 1);
 		if (SubdivisionLevels.contains(Node->getName()))
