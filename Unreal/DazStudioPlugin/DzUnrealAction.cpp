@@ -107,6 +107,7 @@ void DzUnrealAction::WriteConfiguration()
 	 DTUfile.open(QIODevice::WriteOnly);
 	 DzJsonWriter writer(&DTUfile);
 	 writer.startObject(true);
+	 writer.addMember("Asset Id", Selection->getAssetId());
 	 writer.addMember("Asset Name", CharacterName);
 	 writer.addMember("Asset Type", AssetType);
 	 writer.addMember("FBX File", CharacterFBX);
@@ -124,7 +125,7 @@ void DzUnrealAction::WriteConfiguration()
 			 stream << "Version, Object, Material, Type, Color, Opacity, File" << endl;
 
 			 writer.startMemberArray("Materials", true);
-			 WriteMaterials(Selection, writer, stream);
+			 WriteOriginalMaterials(Selection, writer, stream);
 			 writer.finishArray();
 		 }
 		 else
@@ -132,7 +133,7 @@ void DzUnrealAction::WriteConfiguration()
 			 QString throwaway;
 			 QTextStream stream(&throwaway);
 			 writer.startMemberArray("Materials", true);
-			 WriteMaterials(Selection, writer, stream);
+			 WriteOriginalMaterials(Selection, writer, stream);
 			 writer.finishArray();
 		 }
 
@@ -221,7 +222,7 @@ void DzUnrealAction::SetExportOptions(DzFileIOSettings& ExportOptions)
 }
 
 // Write out all the surface properties
-void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer, QTextStream& Stream)
+void DzUnrealAction::WriteOriginalMaterials(DzNode* Node, DzJsonWriter& Writer, QTextStream& Stream)
 {
 	 DzObject* Object = Node->getObject();
 	 DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
@@ -348,7 +349,7 @@ void DzUnrealAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer, QTextStr
 	 while (Iterator.hasNext())
 	 {
 		  DzNode* Child = Iterator.next();
-		  WriteMaterials(Child, Writer, Stream);
+		  WriteOriginalMaterials(Child, Writer, Stream);
 	 }
 }
 

@@ -140,6 +140,11 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	exportMaterialPropertyCSVCheckBox = new QCheckBox("", this);
 	connect(exportMaterialPropertyCSVCheckBox, SIGNAL(stateChanged(int)), this, SLOT(HandleExportMaterialPropertyCSVCheckBoxChange(int)));
 
+	// Export Legacy Materials
+	exportOldMaterials = new QCheckBox("", this);
+	connect(exportOldMaterials, SIGNAL(stateChanged(int)), this, SLOT(HandleExportOldMaterialsChange(int)));
+
+
 	// Add the widget to the basic dialog
 	mainLayout->addRow("Asset Name", assetNameEdit);
 	mainLayout->addRow("Asset Type", assetTypeCombo);
@@ -150,6 +155,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	advancedLayout->addRow("FBX Version", fbxVersionCombo);
 	advancedLayout->addRow("Show FBX Dialog", showFbxDialogCheckBox);
 	advancedLayout->addRow("Export Material CSV", exportMaterialPropertyCSVCheckBox);
+	advancedLayout->addRow("Export Legacy Material Logic", exportOldMaterials);
 	addLayout(mainLayout);
 
 	// Advanced
@@ -171,7 +177,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	fbxVersionCombo->setWhatsThis("The version of FBX to use when exporting assets.");
 	showFbxDialogCheckBox->setWhatsThis("Checking this will show the FBX Dialog for adjustments before export.");
 	exportMaterialPropertyCSVCheckBox->setWhatsThis("Checking this will write out a CSV of all the material properties.  Useful for reference when changing materials.");
-
+	exportOldMaterials->setWhatsThis("Checking this will follow new material logic allowing usage of updated Materials");
+	
 	// Load Settings
 	if (!settings->value("IntermediatePath").isNull())
 	{
@@ -201,6 +208,10 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	if (!settings->value("ExportMaterialPropertyCSV").isNull())
 	{
 		exportMaterialPropertyCSVCheckBox->setChecked(settings->value("ExportMaterialPropertyCSV").toBool());
+	}
+	if (!settings->value("ExportLegacyMaterialLogic").isNull())
+	{
+		exportOldMaterials->setChecked(settings->value("ExportLegacyMaterialLogic").toBool());
 	}
 	if (!settings->value("ShowAdvancedSettings").isNull())
 	{
@@ -298,6 +309,11 @@ void DzUnrealDialog::HandleShowFbxDialogCheckBoxChange(int state)
 void DzUnrealDialog::HandleExportMaterialPropertyCSVCheckBoxChange(int state)
 {
 	settings->setValue("ExportMaterialPropertyCSV", state == Qt::Checked);
+}
+
+void DzUnrealDialog::HandleExportOldMaterialsChange(int state)
+{
+	settings->setValue("ExportLegacyMaterialLogic", state == Qt::Checked);
 }
 
 void DzUnrealDialog::HandleShowAdvancedSettingsCheckBoxChange(bool checked)

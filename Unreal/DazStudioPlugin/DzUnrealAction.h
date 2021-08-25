@@ -20,7 +20,7 @@ protected:
 	 DzUnrealSubdivisionDialog* SubdivisionDialog;
 
 	 void executeAction();
-	 void WriteMaterials(DzNode* Node, DzJsonWriter& Writer, QTextStream& Stream);
+	 void WriteOriginalMaterials(DzNode* Node, DzJsonWriter& Writer, QTextStream& Stream);
 	 void WriteInstances(DzNode* Node, DzJsonWriter& Writer, QMap<QString, DzMatrix3>& WritenInstances, QList<DzGeometry*>& ExportedGeometry, QUuid ParentID = QUuid());
 	 QUuid WriteInstance(DzNode* Node, DzJsonWriter& Writer, QUuid ParentID);
 	 void WriteConfiguration();

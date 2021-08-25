@@ -3,6 +3,7 @@
 #include <dzexportmgr.h>
 #include <dzexporter.h>
 #include <dzmainwindow.h>
+#include <dzjsonwriter.h>
 #include <dzmaterial.h>
 #include <dzproperty.h>
 #include <QtCore/qfile.h>
@@ -412,6 +413,115 @@ void DzRuntimePluginAction::RenameDuplicateMaterials(DzNode* Node, QList<QString
 		  RenameDuplicateMaterials(Child, MaterialNames, OriginalMaterialNames);
 	 }
 }
+
+// Write out all the surface properties
+void DzRuntimePluginAction::WriteMaterials(DzNode* Node, DzJsonWriter& Writer)
+{
+	 DzObject* Object = Node->getObject();
+	 DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
+
+	 if (Shape)
+	 {
+		  for (int i = 0; i < Shape->getNumMaterials(); i++)
+		  {
+				DzMaterial* Material = Shape->getMaterial(i);
+				if (Material)
+				{
+					 Writer.startObject(true);
+					 Writer.addMember("Version", 3);
+					 Writer.addMember("Asset Name", Node->getLabel());
+					 Writer.addMember("Material Name", Material->getName());
+					 Writer.addMember("Material Type", Material->getMaterialName());
+
+					 DzPresentation* presentation = Node->getPresentation();
+					 if (presentation != nullptr)
+					 {
+						  const QString presentationType = presentation->getType();
+						  Writer.addMember("Value", presentationType);
+					 }
+					 else
+					 {
+						  Writer.addMember("Value", QString("Unknown"));
+					 }
+
+					 Writer.startMemberArray("Properties", true);
+					 for (int propertyIndex = 0; propertyIndex < Material->getNumProperties(); propertyIndex++)
+					 {
+						  DzProperty* Property = Material->getProperty(propertyIndex);
+						  DzImageProperty* ImageProperty = qobject_cast<DzImageProperty*>(Property);
+						  if (ImageProperty)
+						  {
+								QString Name = Property->getName();
+								QString TextureName = "";
+
+								if (ImageProperty->getValue())
+								{
+									 TextureName = ImageProperty->getValue()->getFilename();
+								}
+
+								Writer.startObject(true);
+								Writer.addMember("Name", Name);
+								Writer.addMember("Value", Material->getDiffuseColor().name());
+								Writer.addMember("Data Type", QString("Texture"));
+								Writer.addMember("Texture", TextureName);
+								Writer.finishObject();
+								continue;
+						  }
+
+						  DzColorProperty* ColorProperty = qobject_cast<DzColorProperty*>(Property);
+						  if (ColorProperty)
+						  {
+								QString Name = Property->getName();
+								QString TextureName = "";
+
+								if (ColorProperty->getMapValue())
+								{
+									 TextureName = ColorProperty->getMapValue()->getFilename();
+								}
+
+								Writer.startObject(true);
+								Writer.addMember("Name", Name);
+								Writer.addMember("Value", ColorProperty->getColorValue().name());
+								Writer.addMember("Data Type", QString("Color"));
+								Writer.addMember("Texture", TextureName);
+								Writer.finishObject();
+								continue;
+						  }
+
+						  DzNumericProperty* NumericProperty = qobject_cast<DzNumericProperty*>(Property);
+						  if (NumericProperty)
+						  {
+								QString Name = Property->getName();
+								QString TextureName = "";
+
+								if (NumericProperty->getMapValue())
+								{
+									 TextureName = NumericProperty->getMapValue()->getFilename();
+								}
+
+								Writer.startObject(true);
+								Writer.addMember("Name", Name);
+								Writer.addMember("Value", QString::number(NumericProperty->getDoubleValue()));
+								Writer.addMember("Data Type", QString("Double"));
+								Writer.addMember("Texture", TextureName);
+								Writer.finishObject();
+						  }
+					 }
+					 Writer.finishArray();
+
+					 Writer.finishObject();
+				}
+		  }
+	 }
+
+	 DzNodeListIterator Iterator = Node->nodeChildrenIterator();
+	 while (Iterator.hasNext())
+	 {
+		  DzNode* Child = Iterator.next();
+		  WriteMaterials(Child, Writer);
+	 }
+}
+
 
 // Restore the original material names
 void DzRuntimePluginAction::UndoRenameDuplicateMaterials(DzNode* Node, QList<QString>& MaterialNames, QMap<DzMaterial*, QString>& OriginalMaterialNames)

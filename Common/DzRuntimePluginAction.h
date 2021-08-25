@@ -1,6 +1,7 @@
 #pragma once
 #include <dzaction.h>
 #include <dznode.h>
+#include <dzjsonwriter.h>
 #include <DzFileIOSettings.h>
 
 #include "QtCore/qfile.h"
@@ -36,6 +37,7 @@ protected:
 	 bool ExportBaseMesh;
 	 bool ShowFbxDialog;
 	 bool ExportMaterialPropertiesCSV;
+	 bool ExportOldMaterials;
 	 DzNode* Selection;
 
 	 virtual QString getActionGroup() const { return tr("Bridges"); }
@@ -47,6 +49,8 @@ protected:
 	 virtual void WriteConfiguration() = 0;
 	 virtual void SetExportOptions(DzFileIOSettings &ExportOptions) = 0;
 
+
+	 void WriteMaterials(DzNode* Node, DzJsonWriter& Writer);
 	 // Need to temporarily rename surfaces if there is a name collision
 	 void RenameDuplicateMaterials(DzNode* Node, QList<QString>& MaterialNames, QMap<DzMaterial*, QString>& OriginalMaterialNames);
 	 void UndoRenameDuplicateMaterials(DzNode* Node, QList<QString>& MaterialNames, QMap<DzMaterial*, QString>& OriginalMaterialNames);
