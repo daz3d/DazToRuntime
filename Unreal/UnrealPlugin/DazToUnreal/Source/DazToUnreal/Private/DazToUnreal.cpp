@@ -49,9 +49,9 @@
 #include "Serialization/JsonReader.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
+#include "Engine/GameEngine.h"
 //#include "ISkeletonEditorModule.h"
 //#include "IEditableSkeleton.h"
-
 // NOTE: This FBX include code was copied from FbxImporter.h
 // Temporarily disable a few warnings due to virtual function abuse in FBX source files
 #pragma warning( push )
@@ -402,6 +402,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 TArray<FString> IntermediateMaterials;
 
 	 TArray<TSharedPtr<FJsonValue>> matList = JsonObject->GetArrayField(TEXT("Materials"));
+
 	 for (int32 i = 0; i < matList.Num(); i++)
 	 {
 		  TSharedPtr<FJsonObject> material = matList[i]->AsObject();
@@ -545,6 +546,96 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				}
 		  }
 
+		  // Version 3 "Version, ObjectName, Material, Type, Asset Value, 
+		  if (Version == 3)
+		  {
+			  FString ObjectName = material->GetStringField(TEXT("Asset Name"));
+			  ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
+			  IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
+			  FString ShaderName = material->GetStringField(TEXT("Material Type"));
+			  FString MaterialName = material->GetStringField(TEXT("Material Name"));
+			  FString OgMaterialName = material->GetStringField(TEXT("Material Name"));
+			  FString MaterialValue = material->GetStringField(TEXT("Value"));
+			  bool UseOriginalMat = CachedSettings->UseOriginalMaterialName;
+			  MaterialName = FDazToUnrealUtils::MaterialName(MaterialName, AssetName, UseOriginalMat);
+			  TArray<TSharedPtr<FJsonValue>> Properties = material->GetArrayField(TEXT("Properties"));
+
+			  if (!MaterialProperties.Contains(MaterialName))
+			  {
+				  MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
+			  }
+			
+			  FDUFTextureProperty Property;
+			  Property.Name = "Asset Type";
+			  Property.Type = "String";
+			  Property.Value = MaterialValue;
+			  Property.ObjectName = ObjectName;
+			  Property.ShaderName = ShaderName;
+
+			  MaterialProperties[MaterialName].Add(Property);
+
+			  for (int32 j = 0; j < Properties.Num(); j++)
+			  {
+				  TSharedPtr<FJsonObject> propertyInfo = Properties[j]->AsObject();
+				  FString PropertyName = propertyInfo->GetStringField(TEXT("Name"));
+				  FString TexturePath = propertyInfo->GetStringField(TEXT("Texture"));
+				  FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
+
+				  
+				  Property.Name = propertyInfo->GetStringField(TEXT("Name"));
+				  Property.Type = propertyInfo->GetStringField(TEXT("Data Type"));
+				  Property.Value = propertyInfo->GetStringField(TEXT("Value"));
+				  Property.ObjectName = ObjectName;
+				  Property.ShaderName = ShaderName;
+				  if (Property.Type == TEXT("Texture"))
+				  {
+					  Property.Type = TEXT("Color");
+				  }
+				  // Properties that end with Enabled are switches for functionality
+				  if (Property.Name.EndsWith(TEXT(" Enable")))
+				  {
+					  Property.Type = TEXT("Switch");
+					  if (Property.Value == TEXT("0"))
+					  {
+						  Property.Value = TEXT("false");
+					  }
+					  else
+					  {
+						  Property.Value = TEXT("true");
+					  }
+				  }
+
+				  MaterialProperties[MaterialName].Add(Property);
+				  if (!TextureName.IsEmpty())
+				  {
+					  // If a texture is attached add a texture property
+					  FDUFTextureProperty TextureProperty;
+					  TextureProperty.Name = propertyInfo->GetStringField(TEXT("Name")) + TEXT(" Texture");
+					  TextureProperty.Type = TEXT("Texture");
+					  TextureProperty.ObjectName = ObjectName;
+					  TextureProperty.ShaderName = ShaderName;
+
+					  if (!TextureFileSourceToTarget.Contains(TexturePath))
+					  {
+						  int32 TextureCount = 0;
+						  FString NewTextureName = FDazToUnrealUtils::TextureName(OgMaterialName, PropertyName, AssetName);
+						  TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
+					  }
+
+					  TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
+					  MaterialProperties[MaterialName].Add(TextureProperty);
+
+					  // and a switch property for things like Specular that could come from different channels
+					  FDUFTextureProperty SwitchProperty;
+					  SwitchProperty.Name = propertyInfo->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
+					  SwitchProperty.Type = TEXT("Switch");
+					  SwitchProperty.Value = TEXT("true");
+					  SwitchProperty.ObjectName = ObjectName;
+					  SwitchProperty.ShaderName = ShaderName;
+					  MaterialProperties[MaterialName].Add(SwitchProperty);
+				  }
+			  }
+		  }
 	 }
 
 	 // Load the FBX file
@@ -1245,7 +1336,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 }
 
 	 // Create Intermediate Materials
-	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::Material)
 	 {
 		 // Create a default Master Subsurface Profile if needed
 		 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, MaterialProperties);
@@ -1291,8 +1382,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 						{
 							SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(MaterialName, ChildMaterialFolder, MaterialProperties[MaterialName]);
 						}
-
-						if (FDazToUnrealMaterials::GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]) == BaseMaterialPath)
+						FSoftObjectPath BaseChildMaterialPath = FDazToUnrealMaterials::GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]);
+						UObject* BaseChildMaterial = BaseChildMaterialPath.TryLoad();
+						if (BaseChildMaterialPath == BaseMaterialPath)
 						{
 
 							int32 Length = MaterialProperties[MaterialName].Num();
@@ -1308,7 +1400,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 											break;
 									}
 								}
-							}
+							} 
 
 							FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, UnrealMaterialConstant, SubsurfaceProfile);
 						}
@@ -1316,7 +1408,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 						{
 							FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
 						}
-					 }
+					 } 
 				}
 				else if (ChildMaterials.Num() == 1)
 				{
