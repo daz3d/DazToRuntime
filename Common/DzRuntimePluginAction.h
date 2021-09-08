@@ -25,6 +25,8 @@ protected:
 	 QString ImportFolder;
 	 QString CharacterFolder;
 	 QString CharacterFBX;
+	 QString CharacterBaseFBX;
+	 QString CharacterHDFBX;
 	 QString AssetType;
 	 QString MorphString;
 	 QString FBXVersion;

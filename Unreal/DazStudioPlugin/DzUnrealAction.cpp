@@ -74,6 +74,8 @@ void DzUnrealAction::executeAction()
 		 ImportFolder = dlg->intermediateFolderEdit->text();
 		 CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
 		 CharacterFBX = CharacterFolder + CharacterName + ".fbx";
+		 CharacterBaseFBX = CharacterFolder + CharacterName + "_base.fbx";
+		 CharacterHDFBX = CharacterFolder + CharacterName + "_HD.fbx";
 		 AssetType = dlg->assetTypeCombo->currentText().replace(" ", "");
 		 MorphString = dlg->GetMorphString();
 		 Port = dlg->portEdit->text().toInt();
@@ -110,6 +112,8 @@ void DzUnrealAction::WriteConfiguration()
 	 writer.addMember("Asset Name", CharacterName);
 	 writer.addMember("Asset Type", AssetType);
 	 writer.addMember("FBX File", CharacterFBX);
+	 writer.addMember("Base FBX File", CharacterBaseFBX);
+	 writer.addMember("HD FBX File", CharacterHDFBX);
 	 writer.addMember("Import Folder", CharacterFolder);
 
 	 if (AssetType != "Environment")
