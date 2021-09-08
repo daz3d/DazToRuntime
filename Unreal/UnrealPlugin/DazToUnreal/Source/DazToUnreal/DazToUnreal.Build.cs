@@ -48,8 +48,7 @@ public class DazToUnreal : ModuleRules
 			}
 			);
 
-        AddEngineThirdPartyPrivateStaticDependencies(Target,
-            "FBX"
-        );
-    }
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "FBX");
+		AddEngineThirdPartyPrivateStaticDependencies(Target, new string[] { "MikkTSpace", "OpenSubdiv" });
+	}
 }
