@@ -74,6 +74,8 @@ void DzUnrealAction::executeAction()
 		 ImportFolder = dlg->intermediateFolderEdit->text();
 		 CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
 		 CharacterFBX = CharacterFolder + CharacterName + ".fbx";
+		 CharacterBaseFBX = CharacterFolder + CharacterName + "_base.fbx";
+		 CharacterHDFBX = CharacterFolder + CharacterName + "_HD.fbx";
 		 AssetType = dlg->assetTypeCombo->currentText().replace(" ", "");
 		 MorphString = dlg->GetMorphString();
 		 Port = dlg->portEdit->text().toInt();
@@ -82,6 +84,7 @@ void DzUnrealAction::executeAction()
 		 MorphMapping = dlg->GetMorphMapping();
 		 ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
 		 ExportMaterialPropertiesCSV = dlg->exportMaterialPropertyCSVCheckBox->isChecked();
+		 ExportOldMaterials = dlg->exportOldMaterials->isChecked();
 		 SubdivisionDialog = DzUnrealSubdivisionDialog::Get(dlg);
 		 FBXVersion = dlg->fbxVersionCombo->currentText();
 
@@ -111,6 +114,8 @@ void DzUnrealAction::WriteConfiguration()
 	 writer.addMember("Asset Name", CharacterName);
 	 writer.addMember("Asset Type", AssetType);
 	 writer.addMember("FBX File", CharacterFBX);
+	 writer.addMember("Base FBX File", CharacterBaseFBX);
+	 writer.addMember("HD FBX File", CharacterHDFBX);
 	 writer.addMember("Import Folder", CharacterFolder);
 
 	 if (AssetType != "Environment" 
@@ -125,7 +130,12 @@ void DzUnrealAction::WriteConfiguration()
 			 stream << "Version, Object, Material, Type, Color, Opacity, File" << endl;
 
 			 writer.startMemberArray("Materials", true);
-			 WriteOriginalMaterials(Selection, writer, stream);
+			 if (ExportOldMaterials) {
+				 WriteOriginalMaterials(Selection, writer, stream);
+			 }
+			 else {
+				 WriteMaterials(Selection, writer);
+			 }
 			 writer.finishArray();
 		 }
 		 else
@@ -133,7 +143,12 @@ void DzUnrealAction::WriteConfiguration()
 			 QString throwaway;
 			 QTextStream stream(&throwaway);
 			 writer.startMemberArray("Materials", true);
-			 WriteOriginalMaterials(Selection, writer, stream);
+			 if (ExportOldMaterials) {
+				 WriteOriginalMaterials(Selection, writer, stream);
+			 }
+			 else {
+				 WriteMaterials(Selection, writer);
+			 }
 			 writer.finishArray();
 		 }
 
@@ -191,21 +206,13 @@ void DzUnrealAction::WriteConfiguration()
 		 QString throwaway;
 		 QTextStream stream(&throwaway);
 		 writer.startMemberArray("Materials", true);
-		 WriteMaterials(Selection, writer, stream);
+		 WriteMaterials(Selection, writer);
 		 writer.finishArray();
 	 }
 
 	 writer.finishObject();
 
 	 DTUfile.close();
-
-	 if (AssetType != "Environment" && ExportSubdivisions)
-	 {
-		 QString CMD = "ImportFBXScene " + DTUfilename;
-		 QByteArray array = CMD.toLocal8Bit();
-		 char* cmd = array.data();
-		 int res = system(cmd);
-	 }
 
 	 // Send a message to Unreal telling it to start an import
 	 QUdpSocket* sendSocket = new QUdpSocket(this);
