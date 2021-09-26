@@ -8,6 +8,8 @@
 #include "DazToUnrealEnvironment.h"
 #include "DazToUnrealPoses.h"
 #include "DazToUnrealSubdivision.h"
+#include "DazToUnrealMorphs.h"
+#include "DazJointControlledMorphAnimInstance.h"
 
 #include "LevelEditor.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -1115,6 +1117,20 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 			 AssetsToSelect.Add((UObject*)NewPoseAsset);
 			 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
 		 }
+	 }
+
+	 // Create and attach the Joint Control Anim
+	 if (AssetType == DazAssetType::SkeletalMesh)
+	 {
+		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
+		 {
+			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, SkeletalMesh->Skeleton))
+			 {
+				 //JointControlAnim->CurrentSkeleton = SkeletalMesh->Skeleton;
+				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();
+			 }
+		 }
+		 
 	 }
 
 	 return NewObject;
