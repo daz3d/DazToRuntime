@@ -33,6 +33,10 @@
 #include "dzproperty.h"
 #include "dzsettings.h"
 #include "dzmorph.h"
+#include "dzcontroller.h"
+#include "dznumericnodeproperty.h"
+#include "dzerclink.h"
+#include "dzbone.h"
 #include "DzUnrealMorphSelectionDialog.h"
 
 #include "QtGui/qlayout.h"
@@ -65,6 +69,8 @@ public:
 DzUnrealMorphSelectionDialog::DzUnrealMorphSelectionDialog(QWidget *parent) :
 	DzBasicDialog(parent, DAZ_TO_UNREAL_PLUGIN_NAME)
 {
+	 settings = new QSettings("Daz 3D", "DazToUnreal");
+
 	 morphListWidget = NULL;
 	 morphExportListWidget = NULL;
 	 morphTreeWidget = NULL;
@@ -132,6 +138,7 @@ DzUnrealMorphSelectionDialog::DzUnrealMorphSelectionDialog(QWidget *parent) :
 	QPushButton* TorsoJCMButton = new QPushButton("Torso");
 	QPushButton* ARKit81Button = new QPushButton("ARKit (Genesis8.1)");
 	QPushButton* FaceFX8Button = new QPushButton("FaceFX (Genesis8)");
+	autoJCMCheckBox = new QCheckBox("Auto JCM");
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(ArmsJCMButton, 0, 0);
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(LegsJCMButton, 0, 1);
 	((QGridLayout*)JCMGroupBox->layout())->addWidget(TorsoJCMButton, 0, 2);
@@ -139,12 +146,19 @@ DzUnrealMorphSelectionDialog::DzUnrealMorphSelectionDialog(QWidget *parent) :
 	((QGridLayout*)FaceGroupBox->layout())->addWidget(FaceFX8Button, 0, 2);
 	MorphGroupBox->layout()->addWidget(JCMGroupBox);
 	MorphGroupBox->layout()->addWidget(FaceGroupBox);
+	MorphGroupBox->layout()->addWidget(autoJCMCheckBox);
+
+	if (!settings->value("AutoJCMEnabled").isNull())
+	{
+		autoJCMCheckBox->setChecked(settings->value("AutoJCMEnabled").toBool());
+	}
 	
 	connect(ArmsJCMButton, SIGNAL(released()), this, SLOT(HandleArmJCMMorphsButton()));
 	connect(LegsJCMButton, SIGNAL(released()), this, SLOT(HandleLegJCMMorphsButton()));
 	connect(TorsoJCMButton, SIGNAL(released()), this, SLOT(HandleTorsoJCMMorphsButton()));
 	connect(ARKit81Button, SIGNAL(released()), this, SLOT(HandleARKitGenesis81MorphsButton()));
 	connect(FaceFX8Button, SIGNAL(released()), this, SLOT(HandleFaceFXGenesis8Button()));
+	connect(autoJCMCheckBox, SIGNAL(clicked(bool)), this, SLOT(HandleAutoJCMCheckBoxChange(bool)));
 	
 	treeLayout->addWidget(MorphGroupBox);
 	morphsLayout->addLayout(treeLayout);
@@ -223,6 +237,9 @@ void DzUnrealMorphSelectionDialog::PrepareDialog()
 		DzNode* ChildNode = Selection->getNodeChild(ChildIndex);
 		morphList.append(GetAvailableMorphs(ChildNode));
 	}
+
+	//GetActiveJointControlledMorphs(Selection);
+
 	UpdateMorphsTree();
 	HandlePresetChanged("LastUsed.csv");
 }
@@ -335,6 +352,170 @@ QStringList DzUnrealMorphSelectionDialog::GetAvailableMorphs(DzNode* Node)
 	}
 	
 	return newMorphList;
+}
+
+// Recursive function for finding all active JCM morphs for a node
+QList<JointLinkInfo> DzUnrealMorphSelectionDialog::GetActiveJointControlledMorphs(DzNode* Node)
+{
+	QList<JointLinkInfo> returnMorphs;
+	if (autoJCMCheckBox->isChecked())
+	{
+		if (Node == nullptr)
+		{
+			Node = dzScene->getPrimarySelection();
+
+			// For items like clothing, create the morph list from the character
+			DzNode* ParentFigureNode = Node;
+			while (ParentFigureNode->getNodeParent())
+			{
+				ParentFigureNode = ParentFigureNode->getNodeParent();
+				if (DzSkeleton* Skeleton = ParentFigureNode->getSkeleton())
+				{
+					if (DzFigure* Figure = qobject_cast<DzFigure*>(Skeleton))
+					{
+						Node = ParentFigureNode;
+						break;
+					}
+				}
+			}
+		}
+
+
+		DzObject* Object = Node->getObject();
+		DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
+
+		for (int index = 0; index < Node->getNumProperties(); index++)
+		{
+			DzProperty* property = Node->getProperty(index);
+			returnMorphs.append(GetJointControlledMorphInfo(property));
+		}
+
+		if (Object)
+		{
+			for (int index = 0; index < Object->getNumModifiers(); index++)
+			{
+				DzModifier* modifier = Object->getModifier(index);
+				QString modName = modifier->getName();
+				QString modLabel = modifier->getLabel();
+				DzMorph* mod = qobject_cast<DzMorph*>(modifier);
+				if (mod)
+				{
+					for (int propindex = 0; propindex < modifier->getNumProperties(); propindex++)
+					{
+						DzProperty* property = modifier->getProperty(propindex);
+						returnMorphs.append(GetJointControlledMorphInfo(property));
+					}
+
+				}
+
+			}
+		}
+
+	}
+
+	return returnMorphs;
+}
+
+QList<JointLinkInfo> DzUnrealMorphSelectionDialog::GetJointControlledMorphInfo(DzProperty* property)
+{
+	QList<JointLinkInfo> returnMorphs;
+
+	QString propName = property->getName();
+	QString propLabel = property->getLabel();
+	DzPresentation* presentation = property->getPresentation();
+	if (presentation && presentation->getType() == "Modifier/Corrective")
+	{
+		QString linkLabel;
+		QString linkDescription;
+		QString linkBone;
+		QString linkAxis;
+		QString linkBodyType;
+		double bodyStrength = 0.0f;
+		double currentBodyScalar = 0.0f;
+		double linkScalar = 0.0f;
+		bool isJCM = false;
+		QList<double> keys;
+		QList<double> keysValues;
+		QList<JointLinkKey> linkKeys;
+
+		for (int ControllerIndex = 0; ControllerIndex < property->getNumControllers(); ControllerIndex++)
+		{
+			DzController* controller = property->getController(ControllerIndex);
+
+			DzERCLink* link = qobject_cast<DzERCLink*>(controller);
+			if (link)
+			{
+				double value = link->getScalar();
+				QString linkProperty = link->getProperty()->getName();
+				QString linkObject = link->getProperty()->getOwner()->getName();
+				double currentValue = link->getProperty()->getDoubleValue();
+
+				DzBone* bone = qobject_cast<DzBone*>(link->getProperty()->getOwner());
+				if (bone)
+				{
+					linkLabel = propLabel;
+					linkDescription = controller->description();
+					linkBone = linkObject;
+					linkAxis = linkProperty;
+					linkScalar = value;
+					isJCM = true;
+
+					if (link->getType() == 6)
+					{
+						for (int keyIndex = 0; keyIndex < link->getNumKeyValues(); keyIndex++)
+						{
+							JointLinkKey newKey;
+							newKey.Angle = link->getKey(keyIndex);
+							newKey.Value = link->getKeyValue(keyIndex);
+							linkKeys.append(newKey);
+							keys.append(link->getKey(keyIndex));
+							keysValues.append(link->getKeyValue(keyIndex));
+						}
+					}
+				}
+				else
+				{
+					linkBodyType = linkObject;
+					bodyStrength = value;
+					currentBodyScalar = currentValue;
+				}
+			}
+		}
+
+		if (isJCM && currentBodyScalar > 0.0f)
+		{
+			JointLinkInfo linkInfo;
+			linkInfo.Bone = linkBone;
+			linkInfo.Axis = linkAxis;
+			linkInfo.Morph = linkLabel;
+			linkInfo.Scalar = linkScalar;
+			linkInfo.Alpha = currentBodyScalar;
+			linkInfo.Keys = linkKeys;
+			qDebug() << "Label " << linkLabel << " Description " << linkDescription << " Bone " << linkBone << " Axis " << linkAxis << " Alpha " << currentBodyScalar << " Scalar " << linkScalar;
+			if (!keys.isEmpty())
+			{
+				foreach(double key, keys)
+				{
+					qDebug() << key;
+				}
+
+				foreach(double key, keysValues)
+				{
+					qDebug() << key;
+				}
+
+			}
+
+			if (morphs.contains(linkLabel) && !morphsToExport.contains(morphs[linkLabel]))
+			{
+				morphsToExport.append(morphs[linkLabel]);
+			}
+
+			returnMorphs.append(linkInfo);
+
+		}
+	}
+	return returnMorphs;
 }
 
 // Build out the left tree
@@ -718,6 +899,11 @@ void DzUnrealMorphSelectionDialog::HandleFaceFXGenesis8Button()
 	RefreshExportMorphList();
 }
 
+void DzUnrealMorphSelectionDialog::HandleAutoJCMCheckBoxChange(bool checked)
+{
+	settings->setValue("AutoJCMEnabled", checked);
+}
+
 // Refresh the Right export list
 void DzUnrealMorphSelectionDialog::RefreshExportMorphList()
 {
@@ -780,12 +966,15 @@ void DzUnrealMorphSelectionDialog::HandlePresetChanged(const QString& presetName
 	}
 
 	RefreshExportMorphList();
+	GetActiveJointControlledMorphs();
 	file.close();
 }
 
 // Get the morph string in the format for the Daz FBX Export
 QString DzUnrealMorphSelectionDialog::GetMorphString()
 {
+	GetActiveJointControlledMorphs();
+
 	if (morphsToExport.length() == 0)
 	{
 		return "";
