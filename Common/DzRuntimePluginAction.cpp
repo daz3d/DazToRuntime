@@ -10,6 +10,7 @@
 #include <dzimageproperty.h>
 #include <dzstringproperty.h>
 #include <dznumericproperty.h>
+#include <dzfloatproperty.h>
 #include <dzcolorproperty.h>
 #include <dzstringproperty.h>
 #include <dzenumproperty.h>
@@ -86,6 +87,9 @@ void DzRuntimePluginAction::Export()
 					AssetType = "SkeletalMesh";
 				}
 			}
+
+			//Unlock the transform controls so the node can be moved to root
+			UnlockTranform(Node);
 
 			// Disconnect the asset being sent from everything else
 			QList<AttachmentInfo> AttachmentList;
@@ -610,6 +614,31 @@ bool DzRuntimePluginAction::CheckIfPoseExportIsDestructive()
 	}
 
 	return false;
+}
+
+void DzRuntimePluginAction::UnlockTranform(DzNode* NodeToUnlock)
+{
+	DzFloatProperty* Property = nullptr;
+	Property = NodeToUnlock->getXPosControl();
+	Property->lock(false);
+	Property = NodeToUnlock->getYPosControl();
+	Property->lock(false);	
+	Property = NodeToUnlock->getZPosControl();
+	Property->lock(false);
+
+	Property = NodeToUnlock->getXRotControl();
+	Property->lock(false);
+	Property = NodeToUnlock->getYRotControl();
+	Property->lock(false);
+	Property = NodeToUnlock->getZRotControl();
+	Property->lock(false);
+
+	Property = NodeToUnlock->getXScaleControl();
+	Property->lock(false);
+	Property = NodeToUnlock->getYScaleControl();
+	Property->lock(false);
+	Property = NodeToUnlock->getZScaleControl();
+	Property->lock(false);
 }
 
 #include "moc_DzRuntimePluginAction.cpp"

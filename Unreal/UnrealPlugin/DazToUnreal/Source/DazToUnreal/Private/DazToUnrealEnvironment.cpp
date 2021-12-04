@@ -23,9 +23,9 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 		double InstanceYPos = Instance->GetNumberField(TEXT("TranslationZ"));
 		double InstanceZPos = Instance->GetNumberField(TEXT("TranslationY"));
 
-		double InstanceXRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationX")));
-		double InstanceYRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationY")));
-		double InstanceZRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationZ")));
+		double InstanceXRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationZ")));
+		double InstanceYRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationY"))) * -1.0f;
+		double InstanceZRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationX")));
 
 		double ScaleXPos = Instance->GetNumberField(TEXT("ScaleX"));
 		double ScaleYPos = Instance->GetNumberField(TEXT("ScaleZ"));
