@@ -1124,7 +1124,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 {
 		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
 		 {
-			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, SkeletalMesh->Skeleton))
+			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, SkeletalMesh->Skeleton, SkeletalMesh))
 			 {
 				 //JointControlAnim->CurrentSkeleton = SkeletalMesh->Skeleton;
 				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();

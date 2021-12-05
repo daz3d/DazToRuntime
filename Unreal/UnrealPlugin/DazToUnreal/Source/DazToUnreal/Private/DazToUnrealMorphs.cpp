@@ -10,8 +10,11 @@
 #include "EdGraphSchema_K2_Actions.h"
 #include "AnimGraphNode_LinkedInputPose.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Animation/MorphTarget.h"
+#include "LODUtilities.h"
+#include "Math/DualQuat.h"
 
-UDazJointControlledMorphAnimInstance* FDazToUnrealMorphs::CreateJointControlAnimation(TSharedPtr<FJsonObject> JsonObject, FString Folder, FString CharacterName, USkeleton* Skeleton)
+UDazJointControlledMorphAnimInstance* FDazToUnrealMorphs::CreateJointControlAnimation(TSharedPtr<FJsonObject> JsonObject, FString Folder, FString CharacterName, USkeleton* Skeleton, USkeletalMesh* Mesh)
 {
 	// Only only create the JCM Anim if the JointLinks object exists
 	const TArray<TSharedPtr<FJsonValue>>* JointLinkList;// = JsonObject->GetArrayField(TEXT("JointLinks"));
@@ -22,7 +25,11 @@ UDazJointControlledMorphAnimInstance* FDazToUnrealMorphs::CreateJointControlAnim
 		const FString ObjectName = FPackageName::ObjectPathToObjectName(PackageName);
 
 		// Create the new blueprint next to the SkeletalMesh and get the AnimInstance from it.
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION < 26
+		UPackage* NewPackage = CreatePackage(nullptr, *PackageName);
+#else
 		UPackage* NewPackage = CreatePackage(*PackageName);
+#endif
 		UAnimBlueprint* AnimBlueprint = CreateBlueprint(NewPackage, FName(AssetName), Skeleton);
 		UDazJointControlledMorphAnimInstance* AnimInstance = Cast<UDazJointControlledMorphAnimInstance>(AnimBlueprint->GetAnimBlueprintGeneratedClass()->ClassDefaultObject);
 
@@ -85,9 +92,20 @@ UDazJointControlledMorphAnimInstance* FDazToUnrealMorphs::CreateJointControlAnim
 					NewJointLink.Keys.Add(NewJointLinkKey);
 				}
 			}
-
+			if (false)
+			{
+				FakeDualQuarternion(NewJointLink.MorphName, NewJointLink.BoneName, NewJointLink.PrimaryAxis, 0.0f, 90.0f, Mesh);
+			}
 			AnimInstance->ControlLinks.Add(NewJointLink);
 		}
+
+#if 0
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION <= 26
+		FLODUtilities::RegenerateLOD(Mesh, -1, true, true);
+#else
+		FLODUtilities::RegenerateLOD(Mesh, nullptr, -1, true, true);
+#endif
+#endif
 
 		// Setup Secondary Axis.  We need to know the primary and secondary axis 
 		// because if we check the rotation in the wrong order the morphs can pop.
@@ -108,6 +126,7 @@ UDazJointControlledMorphAnimInstance* FDazToUnrealMorphs::CreateJointControlAnim
 		// Recompile the AnimBlueprint and return the updated AnimInstance
 		FBlueprintEditorUtils::MarkBlueprintAsModified(AnimBlueprint);
 		FKismetEditorUtilities::CompileBlueprint(AnimBlueprint);
+		
 		AnimInstance = Cast<UDazJointControlledMorphAnimInstance>(AnimBlueprint->GetAnimBlueprintGeneratedClass()->ClassDefaultObject);
 		return AnimInstance;
 	}
@@ -166,4 +185,283 @@ UAnimBlueprint* FDazToUnrealMorphs::CreateBlueprint(UObject* InParent, FName Nam
 	return NewBP;
 
 	
+}
+
+void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, EDazMorphAnimInstanceDriver Axis, float MinBend, float MaxBend, USkeletalMesh* Mesh)
+{
+	if (UMorphTarget* Morph = Mesh->FindMorphTarget(MorphName))
+	{
+		const FReferenceSkeleton& RefSkeleton = Mesh->RefSkeleton;
+
+		TArray<FTransform> ComponentSpaceTransforms;
+		FAnimationRuntime::FillUpComponentSpaceTransforms(RefSkeleton, RefSkeleton.GetRefBonePose(), ComponentSpaceTransforms);
+
+		int32 BoneIndex = RefSkeleton.FindBoneIndex(BoneName);
+		//const FMeshBoneInfo& BoneInfo = RefSkeleton.GetRefBoneInfo()[BoneIndex];
+
+		///int32 ParentBoneIndex = BoneInfo.ParentIndex;
+		///const FMeshBoneInfo& ParentBoneInfo = RefSkeleton.GetRefBoneInfo()[ParentBoneIndex];
+		///FName ParentBoneName = ParentBoneInfo.Name;
+
+		FSkeletalMeshImportData ImportData;
+		Mesh->LoadLODImportedData(0, ImportData);
+
+		/*TMap<int32, float> ParentBoneVertexToWeight;
+		TMap<int32, float> ChildBoneVertexToWeight;
+
+		for (SkeletalMeshImportData::FRawBoneInfluence Influence : ImportData.Influences)
+		{
+			if (Influence.BoneIndex == ParentBoneIndex)
+			{
+				ParentBoneVertexToWeight.Add(Influence.VertexIndex, Influence.Weight);
+			}
+			if (Influence.BoneIndex == BoneIndex)
+			{
+				ChildBoneVertexToWeight.Add(Influence.VertexIndex, Influence.Weight);
+			}
+		}*/
+
+		// Get the Bone's component position
+		//const FMeshBoneInfo& RecurseBone = BoneInfo;
+		/*int32 RecurseBoneIndex = BoneIndex;
+		FVector BoneComponentPosition = RefSkeleton.GetRefBonePose()[BoneIndex].GetTranslation();
+		while (RecurseBoneIndex != 0)
+		{
+			const FMeshBoneInfo& RecurseBoneInfo = RefSkeleton.GetRefBoneInfo()[RecurseBoneIndex];
+			BoneComponentPosition += RefSkeleton.GetRefBonePose()[RecurseBoneInfo.ParentIndex].GetTranslation();
+			RecurseBoneIndex = RecurseBoneInfo.ParentIndex;
+		}*/
+
+		int32 ImportMorphIndex = 0;
+		for (FSkeletalMeshImportData& ImportMorphData : ImportData.MorphTargets)
+		{
+			FName ImportMorphName = FName(ImportData.MorphTargetNames[ImportMorphIndex]);
+			if (ImportMorphName == MorphName)
+			{
+				// Setup the Rotation Info
+				FVector RotationVector = FVector(0.0f, 0.0f, 1.0f);
+				float Direction = 1.0f;
+				if (Axis == EDazMorphAnimInstanceDriver::RotationZ)
+				{
+					RotationVector = FVector(0.0f, 0.0f, 1.0f);
+				}
+
+				if (Axis == EDazMorphAnimInstanceDriver::RotationY)
+				{
+					RotationVector = FVector(0.0f, 1.0f, 0.0f);
+					//Direction = -1.0f;
+				}
+				FTransform RotationTransform = FTransform(FQuat(RotationVector, FMath::DegreesToRadians(90.0f * Direction)));
+
+				//for (int32 ModifiedPointIndex = 0; ModifiedPointIndex < ImportData.MorphTargetModifiedPoints[ImportMorphIndex].Num(); ModifiedPointIndex++)
+				int32 ModifiedPointIndex = 0;
+				for (uint32 ModifiedPointVertexIndex : ImportData.MorphTargetModifiedPoints[ImportMorphIndex])
+				{
+					//auto VertexSet = ImportData.MorphTargetModifiedPoints[ImportMorphIndex];
+					//FSetElementId SetId = VertexSet[FSetElementId::FromInteger(ModifiedPointVertexIndex)];//.FindId(ModifiedPointIndex);
+					//uint32 ModifiedPointVertexIndex = VertexSet[FSetElementId::FromInteger(ModifiedPointVertexIndex)];
+
+					// Find all the bones influencing this vertex
+					TMap<int32, float> BoneIndexToWeight;
+					for (SkeletalMeshImportData::FRawBoneInfluence Influence : ImportData.Influences)
+					{
+						if (Influence.VertexIndex == ModifiedPointVertexIndex)
+						{
+							BoneIndexToWeight.Add(Influence.BoneIndex, Influence.Weight);
+						}
+					}
+
+					// Get the Linear Blend Skinning for the vertex
+					FVector PointPosition = ImportData.Points[ModifiedPointVertexIndex];
+					FVector LinearBlendPostion = FVector(0.0f, 0.0f, 0.0f);
+					float WeightSum = 0.0f;
+					FTransform LinearBlendTransform = FTransform::Identity;
+					FDualQuat SummedDualQuat(FTransform::Identity);
+					// Sum up from each influence
+					for (TPair<int32, float> BoneToWeightPair : BoneIndexToWeight)
+					{
+						//FTransform BoneRefTransform = ComponentSpaceTransforms[BoneToWeightPair.Key];
+						const FMeshBoneInfo& BoneInfo = RefSkeleton.GetRefBoneInfo()[BoneToWeightPair.Key];
+						FTransform BoneWorldTransform = ComponentSpaceTransforms[BoneToWeightPair.Key];
+						float BoneWeight = BoneToWeightPair.Value;
+
+						//const FMeshBoneInfo& ParentBoneInfo = RefSkeleton.GetRefBoneInfo()[BoneInfo.ParentIndex];
+						FTransform ParentWorldTransform = ComponentSpaceTransforms[BoneInfo.ParentIndex];
+						FTransform BoneTransformInParentSpace = BoneWorldTransform * ParentWorldTransform.Inverse();
+						FVector VertexPositionInBoneSpace = PointPosition - BoneWorldTransform.GetTranslation();
+						FTransform VertexTransformInBoneSpace = FTransform::Identity; //BoneTransformInParentSpace;
+						VertexTransformInBoneSpace.AddToTranslation(VertexPositionInBoneSpace);
+						FTransform RotatedBoneTransform = BoneWorldTransform;
+
+						//FVector RigidSkinningPosition = BoneRefTransform.TransformPosition(VertexPositionInBoneSpace);//PointPosition;
+						if (BoneToWeightPair.Key >= BoneIndex)
+						{
+							VertexTransformInBoneSpace = VertexTransformInBoneSpace * RotationTransform;
+							VertexPositionInBoneSpace = VertexTransformInBoneSpace.GetTranslation();
+							//RotatedBoneTransform = BoneWorldTransform * RotationTransform;
+							//FTransform ParentBoneTransform = ComponentSpaceTransforms[ParentBoneIndex];
+							//FTransform BoneTransformInParentSpace = BoneRefTransform * ParentBoneTransform.Inverse();
+							//FTransform RotatedBonTransformInParentSpace = BoneTransformInParentSpace * RotationTransform;
+							//FTransform BoneTransformInComponentSpace = RotatedBonTransformInParentSpace * ParentBoneTransform;
+							//FTransform BoneTransformInComponentSpace = RotationTransform * BoneRefTransform;
+
+							//RigidSkinningPosition = BoneTransformInComponentSpace.TransformPosition(VertexPositionInBoneSpace);
+							//LinearBlendPostion = RigidSkinningPosition;
+							//BoneTransform = BoneTransform * ParentBoneTransform.Inverse() * RotationTransform * ParentBoneTransform;
+							//FTransform RotationTransform = FTransform(FQuat(RotationVector, FMath::DegreesToRadians(90.0f * Direction)));
+							//RigidSkinningPosition = VertexPositionInBoneSpace.RotateAngleAxis(90.0f * Direction, RotationVector);
+						}
+						FTransform VertexWorldTransform = FTransform(VertexTransformInBoneSpace.GetTranslation()) * FTransform(BoneWorldTransform.GetTranslation());// ParentWorldTransform;
+						//FTransform VertexWorldTransform = BoneWorldTransform * VertexTransformInBoneSpace;
+						FTransform BoneTransformInVertexSpace = VertexTransformInBoneSpace.Inverse();
+
+						//FVector V = VertexWorldTransform;
+						//FQuat Real = TransformForDualQuat.GetRotation();
+						//FQuat Dual = FQuat(V.X, V.Y, V.Z, 0.f) * Real * 0.5f;
+						FDualQuat DualQuatBoneTransform = FDualQuat(VertexWorldTransform);
+						//LinearBlendPostion = RotatedBoneTransform * BoneWeight;
+						LinearBlendTransform.Accumulate(VertexWorldTransform, ScalarRegister(BoneWeight));
+						SummedDualQuat = SummedDualQuat * (DualQuatBoneTransform * BoneWeight);
+						// Sum the weighted Rigid Skinning to get the Linear Blend Skinning
+						//WeightSum += BoneWeight;
+						//LinearBlendPostion += RigidSkinningPosition * BoneWeight;
+					}
+
+					// Weight sum should always be 1.0, but just in case;
+					//LinearBlendPostion = (LinearBlendPostion / WeightSum);// +PointPosition;
+
+					// Get the Dual Quaternion Skinning
+
+					// Sum up from each influence
+					if (0)
+					{
+						int32 QuatCount = 0;
+						FVector TestVector = FVector(0.0f, 0.0f, 0.0f);
+						for (TPair<int32, float> BoneToWeightPair : BoneIndexToWeight)
+						{
+							const FMeshBoneInfo& BoneInfo = RefSkeleton.GetRefBoneInfo()[BoneToWeightPair.Key];
+							FTransform BoneRefTransform = ComponentSpaceTransforms[BoneToWeightPair.Key];
+							//FTransform RotationTransform = FTransform(FQuat(RotationVector, FMath::DegreesToRadians(90.0f * Direction)));
+							FVector VertexPositionInBoneSpace = PointPosition - BoneRefTransform.GetTranslation();
+							FVector BonePositionInVertexSpace = BoneRefTransform.GetTranslation() - PointPosition;
+							FVector RigidSkinningPosition = BoneRefTransform.TransformPosition(VertexPositionInBoneSpace);//PointPosition;
+
+							if (BoneToWeightPair.Key == BoneIndex)
+							{
+								////FTransform ParentBoneTransform = ComponentSpaceTransforms[ParentBoneIndex];
+								////BoneTransform = BoneTransform * ParentBoneTransform.Inverse() * RotationTransform * ParentBoneTransform;
+								//FTransform BoneTransformInComponentSpace = RotationTransform * BoneTransform;
+								////BoneTransform = BoneTransformInComponentSpace;
+								////BoneTransform = BoneTransform * RotationTransform;
+								////FDualQuat DualQuatBoneTransform = FDualQuat(BoneTransform);
+								//FTransform RotationTransform = FTransform(FQuat(RotationVector, FMath::DegreesToRadians(90.0f * Direction)));
+								FTransform ParentBoneTransform = ComponentSpaceTransforms[BoneInfo.ParentIndex];
+								FTransform BoneTransformInParentSpace = BoneRefTransform * ParentBoneTransform.Inverse();
+								FTransform RotatedBonTransformInParentSpace = BoneTransformInParentSpace * RotationTransform;
+								//FTransform BoneTransformInComponentSpace = RotatedBonTransformInParentSpace * ParentBoneTransform;
+								FTransform BoneTransformInComponentSpace = RotationTransform * BoneRefTransform;
+
+								//RigidSkinningPosition = BoneTransformInComponentSpace.TransformPosition(VertexPositionInBoneSpace);
+								//LinearBlendPostion = RigidSkinningPosition;
+								FTransform BoneTransformInVertexSpace = FTransform::Identity * FTransform(BonePositionInVertexSpace);
+								//FTransform TransformForDualQuat = BoneTransformInParentSpace * RotationTransform * ParentBoneTransform * BoneTransformInVertexSpace.Inverse();
+								FTransform TransformForDualQuat = RotationTransform * BoneRefTransform; //BoneTransformInParentSpace * RotationTransform * BoneTransformInVertexSpace.Inverse();
+								TestVector = TransformForDualQuat.TransformPosition(VertexPositionInBoneSpace);
+
+								//FVector V = TransformForDualQuat.GetTranslation();
+								FVector V = TransformForDualQuat.TransformPosition(VertexPositionInBoneSpace);
+								FQuat Real = TransformForDualQuat.GetRotation();
+								FQuat Dual = FQuat(V.X, V.Y, V.Z, 0.f) * Real * 0.5f;
+								FDualQuat DualQuatBoneTransform = FDualQuat(Real, Dual);
+								SummedDualQuat = DualQuatBoneTransform;
+							}
+							float BoneWeight = BoneToWeightPair.Value;
+
+							//FDualQuat DualQuatBoneTransform = FDualQuat(BoneTransform);
+
+							//FDualQuat WeightedDualQuatBoneTransform = DualQuatBoneTransform * BoneWeight;
+							/*if (QuatCount == 0)
+							{
+								SummedDualQuat = WeightedDualQuatBoneTransform;
+							}
+							else
+							{*/
+							//SummedDualQuat = SummedDualQuat * WeightedDualQuatBoneTransform;// .Normalized();
+
+							//}
+							QuatCount++;
+						}
+					}
+					LinearBlendTransform.NormalizeRotation();
+					SummedDualQuat = SummedDualQuat.Normalized();
+					FTransform DualQuatTransform = SummedDualQuat.AsFTransform();
+					FVector DualQuaternionPosition = DualQuatTransform.TransformPosition(FVector(0.0f, 0.0f, 0.0f));//DualQuatTransform.TransformPosition(PointPosition);
+
+					FVector Diff = FVector(DualQuaternionPosition.X - LinearBlendPostion.X,
+						DualQuaternionPosition.Y - LinearBlendPostion.Y,
+						DualQuaternionPosition.Z - LinearBlendPostion.Z);
+
+					UE_LOG(LogTemp, Warning, TEXT("Diff: %f, %f, %f"), Diff.X, Diff.Y, Diff.Z);
+
+					ImportMorphData.Points[ModifiedPointIndex] = LinearBlendTransform.GetTranslation();// +PointPosition;//ImportMorphData.Points[ModifiedPointIndex] + Diff;
+					ModifiedPointIndex++;
+				}
+				//	//auto VertexSet = ImportData.MorphTargetModifiedPoints[ImportMorphIndex];
+				//	//FSetElementId SetId = VertexSet[ModifiedPointIndex];//.FindId(ModifiedPointIndex);
+				//	//uint32 ModifiedPointVertexIndex = VertexSet[SetId];
+				//	//uint32 ModifiedPointVertexIndex = VertexSet[ModifiedPointIndex];
+
+				//	if (ParentBoneVertexToWeight.Contains(ModifiedPointVertexIndex) && ChildBoneVertexToWeight.Contains(ModifiedPointVertexIndex))
+				//	{
+				//		float ParentWeight = ParentBoneVertexToWeight[ModifiedPointVertexIndex];
+				//		float ChildWeight = ChildBoneVertexToWeight[ModifiedPointVertexIndex];
+				//		FVector PointPosition = ImportData.Points[ModifiedPointVertexIndex];
+				//		FVector BonePosition =  RefSkeleton.GetRefBonePose()[BoneIndex].GetTranslation();
+
+				//		FVector Diff = FVector(0.0f, 0.0f, 0.0f);
+				//		FVector RotationVector = FVector(0.0f, 0.0f, 1.0f);
+				//		float Direction = 1.0f;
+				//		if (Axis == EDazMorphAnimInstanceDriver::RotationZ)
+				//		{
+				//			RotationVector = FVector(0.0f, 0.0f, 1.0f);
+				//		}
+
+				//		if (Axis == EDazMorphAnimInstanceDriver::RotationY)
+				//		{
+				//			RotationVector = FVector(0.0f, 1.0f, 0.0f);
+				//			//Direction = -1.0f;
+				//		}
+
+				//		FVector RelativePointPosition = PointPosition - BoneComponentPosition;
+				//		FVector RotatedPosition = RelativePointPosition.RotateAngleAxis(90.0f * Direction, RotationVector);
+				//		FVector RelativeRotationPosition = /*(RotatedPosition - RelativePointPosition)*/ RotatedPosition  * ParentBoneVertexToWeight[ModifiedPointVertexIndex];
+
+				//		FQuat DualQuatRotation = FQuat(RotationVector, FMath::DegreesToRadians(90.0f * Direction));
+				//		//FQuat DualQuatDisplacement = FQuat(RelativePointPosition.X / 2.0f, RelativePointPosition.Y / 2.0f, RelativePointPosition.Z / 2.0f, 0.0f);
+				//		//FQuat DualQuatDisplacement = FQuat(RelativePointPosition.X, RelativePointPosition.Y, RelativePointPosition.Z, 0.0f);
+				//		FQuat DualQuatDisplacement = FQuat(RelativePointPosition.X, RelativePointPosition.Y, RelativePointPosition.Z, 0.0f) * DualQuatRotation * 0.5f;
+				//		FDualQuat DualQuat = FDualQuat(DualQuatRotation, DualQuatDisplacement);
+				//		//DualQuat.AsFTransform().TransformVector
+				//		DualQuat = DualQuat * ParentBoneVertexToWeight[ModifiedPointVertexIndex];
+				//		FVector DualQuatRelativePostion = DualQuat.AsFTransform().TransformVector(RelativePointPosition);
+				//		/*Diff = FVector(DualQuatRelativePostion.X - RelativePointPosition.X,
+				//			DualQuatRelativePostion.Y - RelativePointPosition.Y,
+				//			DualQuatRelativePostion.Z - RelativePointPosition.Z);*/
+
+				//		Diff = FVector(RelativePointPosition.X - DualQuatRelativePostion.X,
+				//			RelativePointPosition.Y - DualQuatRelativePostion.Y,
+				//			RelativePointPosition.Z - DualQuatRelativePostion.Z);
+
+				//		UE_LOG(LogTemp, Warning, TEXT("Diff: %f, %f, %f"), Diff.X, Diff.Y, Diff.Z);
+
+				//		ImportMorphData.Points[ModifiedPointIndex] = ImportMorphData.Points[ModifiedPointIndex] + Diff;//FVector(100.0f, 0.0f, 0.0f);
+				//	}
+				//	ModifiedPointIndex++;
+				//	
+				//}
+			}
+			ImportMorphIndex++;
+		}
+		Mesh->SaveLODImportedData(0, ImportData);
+	}
 }
