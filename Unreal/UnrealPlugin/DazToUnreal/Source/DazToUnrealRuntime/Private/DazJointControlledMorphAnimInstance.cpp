@@ -58,6 +58,7 @@ void FDazJointControlledMorphAnimInstanceProxy::ProcessLink(FPoseContext& Output
 	// Get the Local space transform and the ref pose transform to see how the transform for the source bone has changed
 	const FBoneContainer& BoneContainer = Output.Pose.GetBoneContainer();
 	int32 BoneIndex = BoneContainer.GetPoseBoneIndexForBoneName(Link.BoneName);
+	if (BoneIndex == INDEX_NONE) return;
 	const FTransform& SourceRefPoseBoneTransform = BoneContainer.GetRefPoseArray()[BoneIndex];
 	FCompactPoseBoneIndex CompactBoneIndex = BoneContainer.GetCompactPoseIndexFromSkeletonIndex(BoneIndex);
 	//Output.Pose.
