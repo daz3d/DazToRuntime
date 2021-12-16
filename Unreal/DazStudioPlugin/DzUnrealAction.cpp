@@ -406,7 +406,8 @@ QUuid DzUnrealAction::WriteInstance(DzNode* Node, DzJsonWriter& Writer, QUuid Pa
 	QString FileName = File.fileName();
 	QStringList Items = FileName.split("/");
 	QStringList Parts = Items[Items.count() - 1].split(".");
-	QString Name = Parts[0].remove(QRegExp("[^A-Za-z0-9_]"));
+	QString AssetID = Node->getAssetUri().getId();
+	QString Name = AssetID.remove(QRegExp("[^A-Za-z0-9_]"));
 	QUuid Uid = QUuid::createUuid();
 
 	Writer.startObject(true);
