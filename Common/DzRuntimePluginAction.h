@@ -71,4 +71,7 @@ protected:
 
 	 // For Pose exports check if writing to the timeline will alter existing keys
 	 bool CheckIfPoseExportIsDestructive();
+
+	 // Need to be able to move asset instances to origin during environment export
+	 void UnlockTranform(DzNode* NodeToUnlock);
 };

@@ -8,6 +8,8 @@
 #include "DazToUnrealEnvironment.h"
 #include "DazToUnrealPoses.h"
 #include "DazToUnrealSubdivision.h"
+#include "DazToUnrealMorphs.h"
+#include "DazJointControlledMorphAnimInstance.h"
 
 #include "LevelEditor.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -50,9 +52,9 @@
 #include "Serialization/JsonReader.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
-#include "Engine/GameEngine.h"
 //#include "ISkeletonEditorModule.h"
 //#include "IEditableSkeleton.h"
+
 // NOTE: This FBX include code was copied from FbxImporter.h
 // Temporarily disable a few warnings due to virtual function abuse in FBX source files
 #pragma warning( push )
@@ -315,292 +317,192 @@ bool FDazToUnrealModule::MakeDirectoryAndCheck(FString& Directory)
 
 UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 {
-	TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
+	 TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
 
-	FString FBXPath = JsonObject->GetStringField(TEXT("FBX File"));
-	FString BaseFBXPath = JsonObject->GetStringField(TEXT("Base FBX File"));
-	FString HDFBXPath = JsonObject->GetStringField(TEXT("HD FBX File"));
-	FString AssetName = FDazToUnrealUtils::SanitizeName(JsonObject->GetStringField(TEXT("Asset Name")));
-	FString ImportFolder = JsonObject->GetStringField(TEXT("Import Folder"));
-	DazAssetType AssetType = DazAssetType::StaticMesh;
-	if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("SkeletalMesh"))
-		AssetType = DazAssetType::SkeletalMesh;
-	else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Animation"))
-		AssetType = DazAssetType::Animation;
-	else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Environment"))
-		AssetType = DazAssetType::Environment;
-	else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Pose"))
-		AssetType = DazAssetType::Pose;
-	else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Material"))
-		AssetType = DazAssetType::Material;
-	// Set up the folder paths
-	FString ImportDirectory = FPaths::ProjectDir() / TEXT("Import");
-	if (!ImportFolder.IsEmpty())
-	{
-		ImportDirectory = ImportFolder;
-	}
+	 FString FBXPath = JsonObject->GetStringField(TEXT("FBX File"));
+	 FString BaseFBXPath = JsonObject->GetStringField(TEXT("Base FBX File"));
+	 FString HDFBXPath = JsonObject->GetStringField(TEXT("HD FBX File"));
+	 FString AssetName = FDazToUnrealUtils::SanitizeName(JsonObject->GetStringField(TEXT("Asset Name")));
+	 FString ImportFolder = JsonObject->GetStringField(TEXT("Import Folder"));
+	 DazAssetType AssetType = DazAssetType::StaticMesh;
+	 if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("SkeletalMesh"))
+		  AssetType = DazAssetType::SkeletalMesh;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Animation"))
+		  AssetType = DazAssetType::Animation;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Environment"))
+		 AssetType = DazAssetType::Environment;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Pose"))
+		 AssetType = DazAssetType::Pose;
 
-	FString ImportCharacterFolder = FPaths::GetPath(FBXPath);
-	FString ImportCharacterTexturesFolder = FPaths::GetPath(FBXPath) / TEXT("Textures");
-	FString ImportCharacterMaterialFolder = FPaths::GetPath(FBXPath) / TEXT("Materials");
-	FString FBXFile = FBXPath;
-	FString BaseFBXFile = BaseFBXPath;
-	FString HDFBXFile = HDFBXPath;
+	 // Set up the folder paths
+	 FString ImportDirectory = FPaths::ProjectDir() / TEXT("Import");
+	 if (!ImportFolder.IsEmpty())
+	 {
+		  ImportDirectory = ImportFolder;
+	 }
 
-	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
+	 FString ImportCharacterFolder = FPaths::GetPath(FBXPath);
+	 FString ImportCharacterTexturesFolder = FPaths::GetPath(FBXPath) / TEXT("Textures");
+	 FString ImportCharacterMaterialFolder = FPaths::GetPath(FBXPath) / TEXT("Materials");
+	 FString FBXFile = FBXPath;
+	 FString BaseFBXFile = BaseFBXPath;
+	 FString HDFBXFile = HDFBXPath;
 
-	FString DAZImportFolder = CachedSettings->ImportDirectory.Path;
-	FString DAZAnimationImportFolder = CachedSettings->AnimationImportDirectory.Path;
-	FString CharacterFolder = DAZImportFolder / AssetName;
-	FString CharacterTexturesFolder = CharacterFolder / TEXT("Textures");
-	FString CharacterMaterialFolder = CharacterFolder / TEXT("Materials");
+	 const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	 FString DAZImportFolder = CachedSettings->ImportDirectory.Path;
+	 FString DAZAnimationImportFolder = CachedSettings->AnimationImportDirectory.Path;
+	 FString CharacterFolder = DAZImportFolder / AssetName;
+	 FString CharacterTexturesFolder = CharacterFolder / TEXT("Textures");
+	 FString CharacterMaterialFolder = CharacterFolder / TEXT("Materials");
 
-	FString ContentDirectory = FPaths::ProjectContentDir();
+	 IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 
-	FString LocalDAZImportFolder = DAZImportFolder.Replace(TEXT("/Game/"), *ContentDirectory);
-	FString LocalDAZAnimationImportFolder = DAZAnimationImportFolder.Replace(TEXT("/Game/"), *ContentDirectory);
-	FString LocalCharacterFolder = CharacterFolder.Replace(TEXT("/Game/"), *ContentDirectory);
-	FString LocalCharacterTexturesFolder = CharacterTexturesFolder.Replace(TEXT("/Game/"), *ContentDirectory);
-	FString LocalCharacterMaterialFolder = CharacterMaterialFolder.Replace(TEXT("/Game/"), *ContentDirectory);
+	 FString ContentDirectory = FPaths::ProjectContentDir();
 
-	// Make any needed folders.  If any of these fail, don't continue
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportDirectory)) return false;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterFolder)) return false;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterTexturesFolder)) return false;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return false;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return false;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return false;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return false;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return false;
+	 FString LocalDAZImportFolder = DAZImportFolder.Replace(TEXT("/Game/"), *ContentDirectory);
+	 FString LocalDAZAnimationImportFolder = DAZAnimationImportFolder.Replace(TEXT("/Game/"), *ContentDirectory);
+	 FString LocalCharacterFolder = CharacterFolder.Replace(TEXT("/Game/"), *ContentDirectory);
+	 FString LocalCharacterTexturesFolder = CharacterTexturesFolder.Replace(TEXT("/Game/"), *ContentDirectory);
+	 FString LocalCharacterMaterialFolder = CharacterMaterialFolder.Replace(TEXT("/Game/"), *ContentDirectory);
 
-	if (AssetType == DazAssetType::Environment)
-	{
-		FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
-		return nullptr;
-	}
+	 // Make any needed folders.  If any of these fail, don't continue
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportDirectory)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterTexturesFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return false;
 
-	if (AssetType == DazAssetType::Material)
-	{
-		FDazToUnrealMaterials::ImportMaterial(JsonObject);
-		return nullptr;
-	}
-	// If there's an HD FBX File, that's the source
-	if (FPaths::FileExists(HDFBXFile))
-	{
-		FBXFile = HDFBXFile;
-	}
+	 if (AssetType == DazAssetType::Environment)
+	 {
+		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
+		 return nullptr;
+	 }
 
-	// If there isn't an FBX file, stop
-	if (!FPaths::FileExists(FBXFile))
-	{
-		return false;
-	}
+	 // If there's an HD FBX File, that's the source
+	 if (FPaths::FileExists(HDFBXFile))
+	 {
+		 FBXFile = HDFBXFile;
+	 }
 
-	// Load subdivision info
-	TMap<FString, int> SubdivisionLevels;
-	TArray<TSharedPtr<FJsonValue>> sdList = JsonObject->GetArrayField(TEXT("Subdivisions"));
-	for (int32 i = 0; i < sdList.Num(); i++)
-	{
-		TSharedPtr<FJsonObject> subdivision = sdList[i]->AsObject();
-		SubdivisionLevels.Add(subdivision->GetStringField(TEXT("Asset Name")), subdivision->GetIntegerField(TEXT("Value")));
-	}
+	 // If there isn't an FBX file, stop
+	 if (!FPaths::FileExists(FBXFile))
+	 {
+		  return false;
+	 }
 
-	// Use the maps file to find the textures to load
-	TMap<FString, FString> TextureFileSourceToTarget;
-	TArray<FString> IntermediateMaterials;
+	 // Load subdivision info
+	 TMap<FString, int> SubdivisionLevels;
+	 TArray<TSharedPtr<FJsonValue>> sdList = JsonObject->GetArrayField(TEXT("Subdivisions"));
+	 for (int32 i = 0; i < sdList.Num(); i++)
+	 {
+		  TSharedPtr<FJsonObject> subdivision = sdList[i]->AsObject();
+		  SubdivisionLevels.Add(subdivision->GetStringField(TEXT("Asset Name")), subdivision->GetIntegerField(TEXT("Value")));
+	 }
 
-	TArray<TSharedPtr<FJsonValue>> matList = JsonObject->GetArrayField(TEXT("Materials"));
+	 // Use the maps file to find the textures to load
+	 TMap<FString, FString> TextureFileSourceToTarget;
+	 TArray<FString> IntermediateMaterials;
 
-	for (int32 i = 0; i < matList.Num(); i++)
-	{
-		TSharedPtr<FJsonObject> material = matList[i]->AsObject();
-		int32 Version = material->GetIntegerField(TEXT("Version"));
+	 TArray<TSharedPtr<FJsonValue>> matList = JsonObject->GetArrayField(TEXT("Materials"));
+	 for (int32 i = 0; i < matList.Num(); i++)
+	 {
+		  TSharedPtr<FJsonObject> material = matList[i]->AsObject();
+		  int32 Version = material->GetIntegerField(TEXT("Version"));
 
-		// Version 1 "Version, Material, Type, Color, Opacity, File"
-		if (Version == 1)
-		{
-			FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
-			MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
-			FString TexturePath = material->GetStringField(TEXT("Texture"));
-			FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
+		  // Version 1 "Version, Material, Type, Color, Opacity, File"
+		  if (Version == 1)
+		  {
+				FString MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
+				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
+				FString TexturePath = material->GetStringField(TEXT("Texture"));
+				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
 
-			if (!MaterialProperties.Contains(MaterialName))
-			{
-				MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
-			}
-			FDUFTextureProperty Property;
-			Property.Name = material->GetStringField(TEXT("Name"));
-			Property.Type = material->GetStringField(TEXT("Data Type"));
-			Property.Value = material->GetStringField(TEXT("Value"));
-			if (Property.Type == TEXT("Texture"))
-			{
-				Property.Type = TEXT("Color");
-			}
-
-			MaterialProperties[MaterialName].Add(Property);
-			if (!TextureName.IsEmpty())
-			{
-				// If a texture is attached add a texture property
-				FDUFTextureProperty TextureProperty;
-				TextureProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture");
-				TextureProperty.Type = TEXT("Texture");
-
-				if (!TextureFileSourceToTarget.Contains(TexturePath))
+				if (!MaterialProperties.Contains(MaterialName))
 				{
-					int32 TextureCount = 0;
-					FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
-					while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
-					{
-						TextureCount++;
-						NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
-					}
-					TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
+					 MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
+				}
+				FDUFTextureProperty Property;
+				Property.Name = material->GetStringField(TEXT("Name"));
+				Property.Type = material->GetStringField(TEXT("Data Type"));
+				Property.Value = material->GetStringField(TEXT("Value"));
+				if (Property.Type == TEXT("Texture"))
+				{
+					 Property.Type = TEXT("Color");
 				}
 
-				TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
-				MaterialProperties[MaterialName].Add(TextureProperty);
-				//TextureFiles.AddUnique(TexturePath);
-
-				// and a switch property for things like Specular that could come from different channels
-				FDUFTextureProperty SwitchProperty;
-				SwitchProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
-				SwitchProperty.Type = TEXT("Switch");
-				SwitchProperty.Value = TEXT("true");
-				MaterialProperties[MaterialName].Add(SwitchProperty);
-			}
-		}
-
-		// Version 2 "Version, ObjectName, Material, Type, Color, Opacity, File"
-		if (Version == 2)
-		{
-			FString ObjectName = material->GetStringField(TEXT("Asset Name"));
-			ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
-			IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
-			FString ShaderName = material->GetStringField(TEXT("Material Type"));
-			FString MaterialName = material->GetStringField(TEXT("Material Name"));
-			FString OgMaterialName = material->GetStringField(TEXT("Material Name"));
-			FString PropertyName = material->GetStringField(TEXT("Name"));
-			bool UseOriginalMat = CachedSettings->UseOriginalMaterialName;
-			MaterialName = FDazToUnrealUtils::MaterialName(MaterialName, AssetName, UseOriginalMat);
-
-			FString TexturePath = material->GetStringField(TEXT("Texture"));
-			FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
-
-			if (!MaterialProperties.Contains(MaterialName))
-			{
-				MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
-			}
-			FDUFTextureProperty Property;
-			Property.Name = material->GetStringField(TEXT("Name"));
-			Property.Type = material->GetStringField(TEXT("Data Type"));
-			Property.Value = material->GetStringField(TEXT("Value"));
-			Property.ObjectName = ObjectName;
-			Property.ShaderName = ShaderName;
-			if (Property.Type == TEXT("Texture"))
-			{
-				Property.Type = TEXT("Color");
-			}
-
-			// Properties that end with Enabled are switches for functionality
-			if (Property.Name.EndsWith(TEXT(" Enable")))
-			{
-				Property.Type = TEXT("Switch");
-				if (Property.Value == TEXT("0"))
+				MaterialProperties[MaterialName].Add(Property);
+				if (!TextureName.IsEmpty())
 				{
-					Property.Value = TEXT("false");
+					 // If a texture is attached add a texture property
+					 FDUFTextureProperty TextureProperty;
+					 TextureProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture");
+					 TextureProperty.Type = TEXT("Texture");
+
+					 if (!TextureFileSourceToTarget.Contains(TexturePath))
+					 {
+						  int32 TextureCount = 0;
+						  FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+						  while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
+						  {
+								TextureCount++;
+								NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+						  }
+						  TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
+					 }
+
+					 TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
+					 MaterialProperties[MaterialName].Add(TextureProperty);
+					 //TextureFiles.AddUnique(TexturePath);
+
+					 // and a switch property for things like Specular that could come from different channels
+					 FDUFTextureProperty SwitchProperty;
+					 SwitchProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
+					 SwitchProperty.Type = TEXT("Switch");
+					 SwitchProperty.Value = TEXT("true");
+					 MaterialProperties[MaterialName].Add(SwitchProperty);
+				}
+		  }
+
+		  // Version 2 "Version, ObjectName, Material, Type, Color, Opacity, File"
+		  if (Version == 2)
+		  {		
+				FString ObjectName = material->GetStringField(TEXT("Asset Name"));
+				ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
+				IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
+				FString ShaderName = material->GetStringField(TEXT("Material Type"));
+				FString MaterialName;
+				if (CachedSettings->UseOriginalMaterialName)
+				{
+					 MaterialName = material->GetStringField(TEXT("Material Name"));
 				}
 				else
 				{
-					Property.Value = TEXT("true");
+					 MaterialName = AssetName + TEXT("_") + material->GetStringField(TEXT("Material Name"));
 				}
-			}
-
-			MaterialProperties[MaterialName].Add(Property);
-			if (!TextureName.IsEmpty())
-			{
-				// If a texture is attached add a texture property
-				FDUFTextureProperty TextureProperty;
-				TextureProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture");
-				TextureProperty.Type = TEXT("Texture");
-				TextureProperty.ObjectName = ObjectName;
-				TextureProperty.ShaderName = ShaderName;
-
-				if (!TextureFileSourceToTarget.Contains(TexturePath))
-				{
-					int32 TextureCount = 0;
-					//FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
-					FString NewTextureName = FDazToUnrealUtils::TextureName(OgMaterialName, PropertyName, AssetName);
-
-					//while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
-					//{
-						//	TextureCount++;
-						//	NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
-					//}
-					TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
-				}
-
-				TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
-				MaterialProperties[MaterialName].Add(TextureProperty);
-				//TextureFiles.AddUnique(TexturePath);
-
-				// and a switch property for things like Specular that could come from different channels
-				FDUFTextureProperty SwitchProperty;
-				SwitchProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
-				SwitchProperty.Type = TEXT("Switch");
-				SwitchProperty.Value = TEXT("true");
-				SwitchProperty.ObjectName = ObjectName;
-				SwitchProperty.ShaderName = ShaderName;
-				MaterialProperties[MaterialName].Add(SwitchProperty);
-			}
-		}
-
-		// Version 3 "Version, ObjectName, Material, Type, Asset Value, 
-		if (Version == 3)
-		{
-			FString ObjectName = material->GetStringField(TEXT("Asset Name"));
-			ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
-			IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
-			FString ShaderName = material->GetStringField(TEXT("Material Type"));
-			FString MaterialName = material->GetStringField(TEXT("Material Name"));
-			FString OgMaterialName = material->GetStringField(TEXT("Material Name"));
-			FString MaterialValue = material->GetStringField(TEXT("Value"));
-			bool UseOriginalMat = CachedSettings->UseOriginalMaterialName;
-			MaterialName = FDazToUnrealUtils::MaterialName(MaterialName, AssetName, UseOriginalMat);
-			TArray<TSharedPtr<FJsonValue>> Properties = material->GetArrayField(TEXT("Properties"));
-
-			if (!MaterialProperties.Contains(MaterialName))
-			{
-				MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
-			}
-
-			FDUFTextureProperty Property;
-			Property.Name = "Asset Type";
-			Property.Type = "String";
-			Property.Value = MaterialValue;
-			Property.ObjectName = ObjectName;
-			Property.ShaderName = ShaderName;
-
-			MaterialProperties[MaterialName].Add(Property);
-
-			for (int32 j = 0; j < Properties.Num(); j++)
-			{
-				TSharedPtr<FJsonObject> propertyInfo = Properties[j]->AsObject();
-				FString PropertyName = propertyInfo->GetStringField(TEXT("Name"));
-				FString TexturePath = propertyInfo->GetStringField(TEXT("Texture"));
+				
+				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
+				FString TexturePath = material->GetStringField(TEXT("Texture"));
 				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
 
-
-				Property.Name = propertyInfo->GetStringField(TEXT("Name"));
-				Property.Type = propertyInfo->GetStringField(TEXT("Data Type"));
-				Property.Value = propertyInfo->GetStringField(TEXT("Value"));
+				if (!MaterialProperties.Contains(MaterialName))
+				{
+					 MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
+				}
+				FDUFTextureProperty Property;
+				Property.Name = material->GetStringField(TEXT("Name"));
+				Property.Type = material->GetStringField(TEXT("Data Type"));
+				Property.Value = material->GetStringField(TEXT("Value"));
 				Property.ObjectName = ObjectName;
 				Property.ShaderName = ShaderName;
 				if (Property.Type == TEXT("Texture"))
 				{
-					Property.Type = TEXT("Color");
+					 Property.Type = TEXT("Color");
 				}
+				
 				// Properties that end with Enabled are switches for functionality
 				if (Property.Name.EndsWith(TEXT(" Enable")))
 				{
@@ -618,594 +520,622 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				MaterialProperties[MaterialName].Add(Property);
 				if (!TextureName.IsEmpty())
 				{
-					// If a texture is attached add a texture property
-					FDUFTextureProperty TextureProperty;
-					TextureProperty.Name = propertyInfo->GetStringField(TEXT("Name")) + TEXT(" Texture");
-					TextureProperty.Type = TEXT("Texture");
-					TextureProperty.ObjectName = ObjectName;
-					TextureProperty.ShaderName = ShaderName;
+					 // If a texture is attached add a texture property
+					 FDUFTextureProperty TextureProperty;
+					 TextureProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture");
+					 TextureProperty.Type = TEXT("Texture");
+					 TextureProperty.ObjectName = ObjectName;
+					 TextureProperty.ShaderName = ShaderName;
 
-					if (!TextureFileSourceToTarget.Contains(TexturePath))
-					{
-						int32 TextureCount = 0;
-						FString NewTextureName = FDazToUnrealUtils::TextureName(OgMaterialName, PropertyName, AssetName);
-						TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
-					}
+					 if (!TextureFileSourceToTarget.Contains(TexturePath))
+					 {
+						  int32 TextureCount = 0;
+						  FString NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+						  while (TextureFileSourceToTarget.FindKey(NewTextureName) != nullptr)
+						  {
+								TextureCount++;
+								NewTextureName = FString::Printf(TEXT("%s_%02d_%s"), *TextureName, TextureCount, *AssetName);
+						  }
+						  TextureFileSourceToTarget.Add(TexturePath, NewTextureName);
+					 }
 
-					TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
-					MaterialProperties[MaterialName].Add(TextureProperty);
+					 TextureProperty.Value = TextureFileSourceToTarget[TexturePath];
+					 MaterialProperties[MaterialName].Add(TextureProperty);
+					 //TextureFiles.AddUnique(TexturePath);
 
-					// and a switch property for things like Specular that could come from different channels
-					FDUFTextureProperty SwitchProperty;
-					SwitchProperty.Name = propertyInfo->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
-					SwitchProperty.Type = TEXT("Switch");
-					SwitchProperty.Value = TEXT("true");
-					SwitchProperty.ObjectName = ObjectName;
-					SwitchProperty.ShaderName = ShaderName;
-					MaterialProperties[MaterialName].Add(SwitchProperty);
+					 // and a switch property for things like Specular that could come from different channels
+					 FDUFTextureProperty SwitchProperty;
+					 SwitchProperty.Name = material->GetStringField(TEXT("Name")) + TEXT(" Texture Active");
+					 SwitchProperty.Type = TEXT("Switch");
+					 SwitchProperty.Value = TEXT("true");
+					 SwitchProperty.ObjectName = ObjectName;
+					 SwitchProperty.ShaderName = ShaderName;
+					 MaterialProperties[MaterialName].Add(SwitchProperty);
 				}
-			}
-		}
-	}
+		  }
+	 }
 
-	// Load the FBX file
-	FbxManager* SdkManager = FbxManager::Create();
+	 // Load the FBX file
+	 FbxManager* SdkManager = FbxManager::Create();
 
-	// create an IOSettings object
-	FbxIOSettings* ios = FbxIOSettings::Create(SdkManager, IOSROOT);
-	SdkManager->SetIOSettings(ios);
+	 // create an IOSettings object
+	 FbxIOSettings* ios = FbxIOSettings::Create(SdkManager, IOSROOT);
+	 SdkManager->SetIOSettings(ios);
 
-	// Create the geometry converter
-	FbxGeometryConverter* GeometryConverter = new FbxGeometryConverter(SdkManager);
+	 // Create the geometry converter
+	 FbxGeometryConverter* GeometryConverter = new FbxGeometryConverter(SdkManager);
 
-	FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
-	const bool bImportStatus = Importer->Initialize(TCHAR_TO_UTF8(*FBXFile));
-	FbxScene* Scene = FbxScene::Create(SdkManager, "");
-	Importer->Import(Scene);
+	 FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
+	 const bool bImportStatus = Importer->Initialize(TCHAR_TO_UTF8(*FBXFile));
+	 FbxScene* Scene = FbxScene::Create(SdkManager, "");
+	 Importer->Import(Scene);
 
-	FbxNode* RootNode = Scene->GetRootNode();
+	 FbxNode* RootNode = Scene->GetRootNode();
 
-	// Find the root bone.  There should only be one bone off the scene root
-	FbxNode* RootBone = nullptr;
-	FString RootBoneName = TEXT("");
-	for (int ChildIndex = 0; ChildIndex < RootNode->GetChildCount(); ++ChildIndex)
-	{
-		FbxNode* ChildNode = RootNode->GetChild(ChildIndex);
-		FbxNodeAttribute* Attr = ChildNode->GetNodeAttribute();
-		if (Attr && Attr->GetAttributeType() == FbxNodeAttribute::eSkeleton)
-		{
-			RootBone = ChildNode;
-			RootBoneName = UTF8_TO_TCHAR(RootBone->GetName());
-			RootBone->SetName(TCHAR_TO_UTF8(TEXT("root")));
-			Attr->SetName(TCHAR_TO_UTF8(TEXT("root")));
-			break;
-		}
-	}
+	 // Find the root bone.  There should only be one bone off the scene root
+	 FbxNode* RootBone = nullptr;
+	 FString RootBoneName = TEXT("");
+	 for (int ChildIndex = 0; ChildIndex < RootNode->GetChildCount(); ++ChildIndex)
+	 {
+		  FbxNode* ChildNode = RootNode->GetChild(ChildIndex);
+		  FbxNodeAttribute* Attr = ChildNode->GetNodeAttribute();
+		  if (Attr && Attr->GetAttributeType() == FbxNodeAttribute::eSkeleton)
+		  {
+				RootBone = ChildNode;
+				RootBoneName = UTF8_TO_TCHAR(RootBone->GetName());
+				RootBone->SetName(TCHAR_TO_UTF8(TEXT("root")));
+				Attr->SetName(TCHAR_TO_UTF8(TEXT("root")));
+				break;
+		  }
+	 }
 
-	// Daz Studio puts the base bone rotations in a different place than Unreal expects them.
-	if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
-	{
+	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
+	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
+	 {
 		FDazToUnrealFbx::RemoveBindPoses(Scene);
 		FDazToUnrealFbx::FixClusterTranformLinks(Scene, RootBone);
-	}
+	 }
 
-	// If this is a skeleton mesh, but a root bone wasn't found, it may be a scene under a group node or something similar
-	// So create a root node.
-	if (AssetType == DazAssetType::SkeletalMesh && RootBone == nullptr)
-	{
-		RootBoneName = AssetName;
+	 // If this is a skeleton mesh, but a root bone wasn't found, it may be a scene under a group node or something similar
+	 // So create a root node.
+	 if (AssetType == DazAssetType::SkeletalMesh && RootBone == nullptr)
+	 {
+		  RootBoneName = AssetName;
 
-		FbxSkeleton* NewRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("root")));
-		NewRootNodeAttribute->SetSkeletonType(FbxSkeleton::eRoot);
-		NewRootNodeAttribute->Size.Set(1.0);
-		RootBone = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("root")));
-		RootBone->SetNodeAttribute(NewRootNodeAttribute);
-		RootBone->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
+		  FbxSkeleton* NewRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("root")));
+		  NewRootNodeAttribute->SetSkeletonType(FbxSkeleton::eRoot);
+		  NewRootNodeAttribute->Size.Set(1.0);
+		  RootBone = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("root")));
+		  RootBone->SetNodeAttribute(NewRootNodeAttribute);
+		  RootBone->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
 
 
-		for (int ChildIndex = RootNode->GetChildCount() - 1; ChildIndex >= 0; --ChildIndex)
-		{
-			FbxNode* ChildNode = RootNode->GetChild(ChildIndex);
-			RootBone->AddChild(ChildNode);
-			if (FbxSkeleton* ChildSkeleton = ChildNode->GetSkeleton())
-			{
-				if (ChildSkeleton->GetSkeletonType() == FbxSkeleton::eRoot)
+		  for (int ChildIndex = RootNode->GetChildCount() - 1; ChildIndex >= 0; --ChildIndex)
+		  {
+				FbxNode* ChildNode = RootNode->GetChild(ChildIndex);
+				RootBone->AddChild(ChildNode);
+				if (FbxSkeleton* ChildSkeleton = ChildNode->GetSkeleton())
 				{
-					ChildSkeleton->SetSkeletonType(FbxSkeleton::eLimb);
+					 if (ChildSkeleton->GetSkeletonType() == FbxSkeleton::eRoot)
+					 {
+						  ChildSkeleton->SetSkeletonType(FbxSkeleton::eLimb);
+					 }
 				}
-			}
-		}
+		  }
 
-		RootNode->AddChild(RootBone);
-	}
+		  RootNode->AddChild(RootBone);
+	 }
 
-	FDazToUnrealFbx::RenameDuplicateBones(RootBone);
+	 FDazToUnrealFbx::RenameDuplicateBones(RootBone);
 
-	// If there are any subdivisions, load the base FBX
-	FbxScene* BaseScene = nullptr;
-	for (auto SubdivisionInfo : SubdivisionLevels)
-	{
-		if (SubdivisionInfo.Value > 0)
-		{
-			FbxImporter* BaseImporter = FbxImporter::Create(SdkManager, "");
-			const bool bBaseImportStatus = BaseImporter->Initialize(TCHAR_TO_UTF8(*BaseFBXFile));
-			BaseScene = FbxScene::Create(SdkManager, "");
-			BaseImporter->Import(BaseScene);
-			break;
-		}
-	}
-
+	 // If there are any subdivisions, load the base FBX
+	 FbxScene* BaseScene = nullptr;
+	 for (auto SubdivisionInfo : SubdivisionLevels)
+	 {
+		 if (SubdivisionInfo.Value > 0)
+		 {
+			 FbxImporter* BaseImporter = FbxImporter::Create(SdkManager, "");
+			 const bool bBaseImportStatus = BaseImporter->Initialize(TCHAR_TO_UTF8(*BaseFBXFile));
+			 BaseScene = FbxScene::Create(SdkManager, "");
+			 BaseImporter->Import(BaseScene);
+			 break;
+		 }
+	 }
 
 
-	// Detach geometry from the skeleton
-	for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
-	{
-		FbxNode* SceneNode = Scene->GetNode(NodeIndex);
-		if (SceneNode == nullptr)
-		{
-			continue;
-		}
-		FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(SceneNode->GetMesh());
-		if (NodeGeometry)
-		{
-			if (SceneNode->GetParent() &&
-				SceneNode->GetParent()->GetNodeAttribute() &&
-				SceneNode->GetParent()->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton)
-			{
-				SceneNode->GetParent()->RemoveChild(SceneNode);
-				RootNode->AddChild(SceneNode);
-			}
-		}
 
-		// Fix Subdivision Weights
-		FString GeometryName = UTF8_TO_TCHAR(SceneNode->GetName());
-		if (BaseScene && SubdivisionLevels.Contains(GeometryName) && SubdivisionLevels[GeometryName] > 0 && SceneNode->GetMesh())
-		{
-			// Find a mesh from the BaseScene to match this mesh
-			for (int BaseNodeIndex = 0; BaseNodeIndex < BaseScene->GetNodeCount(); ++BaseNodeIndex)
-			{
-				FbxNode* BaseSceneNode = BaseScene->GetNode(NodeIndex);
-				if (BaseSceneNode && BaseSceneNode->GetMesh() && UTF8_TO_TCHAR(BaseSceneNode->GetName()) == GeometryName)
+	 // Detach geometry from the skeleton
+	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
+	 {
+		  FbxNode* SceneNode = Scene->GetNode(NodeIndex);
+		  if (SceneNode == nullptr)
+		  {
+				continue;
+		  }
+		  FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(SceneNode->GetMesh());
+		  if (NodeGeometry)
+		  {
+				if (SceneNode->GetParent() &&
+					 SceneNode->GetParent()->GetNodeAttribute() &&
+					 SceneNode->GetParent()->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton)
 				{
-					int32 SubdivisionLevel = SubdivisionLevels[GeometryName];
-					FDazToUnrealSubdivision::SubdivideMesh(BaseSceneNode, SceneNode, SubdivisionLevel);
-					break;
+					 SceneNode->GetParent()->RemoveChild(SceneNode);
+					 RootNode->AddChild(SceneNode);
 				}
-			}
+		  }
 
-		}
-	}
+		  // Fix Subdivision Weights
+		  FString GeometryName = UTF8_TO_TCHAR(SceneNode->GetName());
+		  if (BaseScene && SubdivisionLevels.Contains(GeometryName) && SubdivisionLevels[GeometryName] > 0 && SceneNode->GetMesh())
+		  {
+			  // Find a mesh from the BaseScene to match this mesh
+			  for (int BaseNodeIndex = 0; BaseNodeIndex < BaseScene->GetNodeCount(); ++BaseNodeIndex)
+			  {
+				  FbxNode* BaseSceneNode = BaseScene->GetNode(NodeIndex);
+				  if (BaseSceneNode && BaseSceneNode->GetMesh() && UTF8_TO_TCHAR(BaseSceneNode->GetName()) == GeometryName)
+				  {
+					  int32 SubdivisionLevel = SubdivisionLevels[GeometryName];
+					  FDazToUnrealSubdivision::SubdivideMesh(BaseSceneNode, SceneNode, SubdivisionLevel);
+					  break;
+				  }
+			  }
 
-	// Add IK bones
-	if (RootBone)
-	{
-		// ik_foot_root
-		FbxNode* IKRootNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_root")));
-		if (!IKRootNode)
-		{
-			// Create IK Root 
-			FbxSkeleton* IKRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_root")));
-			IKRootNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-			IKRootNodeAttribute->Size.Set(1.0);
-			IKRootNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_root")));
-			IKRootNode->SetNodeAttribute(IKRootNodeAttribute);
-			IKRootNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
-			RootBone->AddChild(IKRootNode);
-		}
+		  }
+	 }
 
-		// ik_foot_l
-		FbxNode* IKFootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_l")));
-		FbxNode* FootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lFoot")));
-		if (!IKFootLNode && FootLNode)
-		{
-			// Create IK Root 
-			FbxSkeleton* IKFootLNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_l")));
-			IKFootLNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-			IKFootLNodeAttribute->Size.Set(1.0);
-			IKFootLNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_l")));
-			IKFootLNode->SetNodeAttribute(IKFootLNodeAttribute);
-			FbxVector4 FootLocation = FootLNode->EvaluateGlobalTransform().GetT();
-			IKFootLNode->LclTranslation.Set(FootLocation);
-			IKRootNode->AddChild(IKFootLNode);
-		}
+	 // Add IK bones
+	 if (RootBone)
+	 {
+		  // ik_foot_root
+		  FbxNode* IKRootNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_root")));
+		  if (!IKRootNode)
+		  {
+				// Create IK Root 
+				FbxSkeleton* IKRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_root")));
+				IKRootNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				IKRootNodeAttribute->Size.Set(1.0);
+				IKRootNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_root")));
+				IKRootNode->SetNodeAttribute(IKRootNodeAttribute);
+				IKRootNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
+				RootBone->AddChild(IKRootNode);
+		  }
 
-		// ik_foot_r
-		FbxNode* IKFootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_r")));
-		FbxNode* FootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rFoot")));
-		if (!IKFootRNode && FootRNode)
-		{
-			// Create IK Root 
-			FbxSkeleton* IKFootRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_r")));
-			IKFootRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-			IKFootRNodeAttribute->Size.Set(1.0);
-			IKFootRNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_r")));
-			IKFootRNode->SetNodeAttribute(IKFootRNodeAttribute);
-			FbxVector4 FootLocation = FootRNode->EvaluateGlobalTransform().GetT();
-			IKFootRNode->LclTranslation.Set(FootLocation);
-			IKRootNode->AddChild(IKFootRNode);
-		}
+		  // ik_foot_l
+		  FbxNode* IKFootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_l")));
+		  FbxNode* FootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lFoot")));
+		  if (!IKFootLNode && FootLNode)
+		  {
+				// Create IK Root 
+				FbxSkeleton* IKFootLNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_l")));
+				IKFootLNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				IKFootLNodeAttribute->Size.Set(1.0);
+				IKFootLNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_l")));
+				IKFootLNode->SetNodeAttribute(IKFootLNodeAttribute);
+				FbxVector4 FootLocation = FootLNode->EvaluateGlobalTransform().GetT();
+				IKFootLNode->LclTranslation.Set(FootLocation);
+				IKRootNode->AddChild(IKFootLNode);
+		  }
 
-		// ik_hand_root
-		FbxNode* IKHandRootNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_root")));
-		if (!IKHandRootNode)
-		{
-			// Create IK Root 
-			FbxSkeleton* IKHandRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_root")));
-			IKHandRootNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-			IKHandRootNodeAttribute->Size.Set(1.0);
-			IKHandRootNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_root")));
-			IKHandRootNode->SetNodeAttribute(IKHandRootNodeAttribute);
-			IKHandRootNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
-			RootBone->AddChild(IKHandRootNode);
-		}
+		  // ik_foot_r
+		  FbxNode* IKFootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_r")));
+		  FbxNode* FootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rFoot")));
+		  if (!IKFootRNode && FootRNode)
+		  {
+				// Create IK Root 
+				FbxSkeleton* IKFootRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_r")));
+				IKFootRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				IKFootRNodeAttribute->Size.Set(1.0);
+				IKFootRNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_r")));
+				IKFootRNode->SetNodeAttribute(IKFootRNodeAttribute);
+				FbxVector4 FootLocation = FootRNode->EvaluateGlobalTransform().GetT();
+				IKFootRNode->LclTranslation.Set(FootLocation);
+				IKRootNode->AddChild(IKFootRNode);
+		  }
 
-		// ik_hand_gun
-		FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-		FbxNode* HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rHand")));
-		if (!IKHandGunNode && HandRNode)
-		{
-			// Create IK Root 
-			FbxSkeleton* IKHandGunNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-			IKHandGunNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-			IKHandGunNodeAttribute->Size.Set(1.0);
-			IKHandGunNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-			IKHandGunNode->SetNodeAttribute(IKHandGunNodeAttribute);
-			FbxVector4 HandLocation = HandRNode->EvaluateGlobalTransform().GetT();
-			IKHandGunNode->LclTranslation.Set(HandLocation);
-			IKHandRootNode->AddChild(IKHandGunNode);
-		}
+		  // ik_hand_root
+		  FbxNode* IKHandRootNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_root")));
+		  if (!IKHandRootNode)
+		  {
+				// Create IK Root 
+				FbxSkeleton* IKHandRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_root")));
+				IKHandRootNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				IKHandRootNodeAttribute->Size.Set(1.0);
+				IKHandRootNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_root")));
+				IKHandRootNode->SetNodeAttribute(IKHandRootNodeAttribute);
+				IKHandRootNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
+				RootBone->AddChild(IKHandRootNode);
+		  }
 
-		// ik_hand_r
-		FbxNode* IKHandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_r")));
-		//FbxNode* HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rHand")));
-		//FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-		if (!IKHandRNode && HandRNode && IKHandGunNode)
-		{
-			// Create IK Root 
-			FbxSkeleton* IKHandRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_r")));
-			IKHandRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-			IKHandRNodeAttribute->Size.Set(1.0);
-			IKHandRNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_r")));
-			IKHandRNode->SetNodeAttribute(IKHandRNodeAttribute);
-			IKHandRNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
-			IKHandGunNode->AddChild(IKHandRNode);
-		}
+		  // ik_hand_gun
+		  FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
+		  FbxNode* HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rHand")));
+		  if (!IKHandGunNode && HandRNode)
+		  {
+				// Create IK Root 
+				FbxSkeleton* IKHandGunNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
+				IKHandGunNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				IKHandGunNodeAttribute->Size.Set(1.0);
+				IKHandGunNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
+				IKHandGunNode->SetNodeAttribute(IKHandGunNodeAttribute);
+				FbxVector4 HandLocation = HandRNode->EvaluateGlobalTransform().GetT();
+				IKHandGunNode->LclTranslation.Set(HandLocation);
+				IKHandRootNode->AddChild(IKHandGunNode);
+		  }
 
-		// ik_hand_l
-		FbxNode* IKHandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_l")));
-		FbxNode* HandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lHand")));
-		//FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-		if (!IKHandLNode && HandLNode && IKHandGunNode)
-		{
-			// Create IK Root 
-			FbxSkeleton* IKHandRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_l")));
-			IKHandRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-			IKHandRNodeAttribute->Size.Set(1.0);
-			IKHandLNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_l")));
-			IKHandLNode->SetNodeAttribute(IKHandRNodeAttribute);
-			FbxVector4 HandLocation = HandLNode->EvaluateGlobalTransform().GetT();
-			FbxVector4 ParentLocation = IKHandGunNode->EvaluateGlobalTransform().GetT();
-			IKHandLNode->LclTranslation.Set(HandLocation - ParentLocation);
-			IKHandGunNode->AddChild(IKHandLNode);
-		}
-	}
+		  // ik_hand_r
+		  FbxNode* IKHandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_r")));
+		  //FbxNode* HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rHand")));
+		  //FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
+		  if (!IKHandRNode && HandRNode && IKHandGunNode)
+		  {
+				// Create IK Root 
+				FbxSkeleton* IKHandRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_r")));
+				IKHandRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				IKHandRNodeAttribute->Size.Set(1.0);
+				IKHandRNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_r")));
+				IKHandRNode->SetNodeAttribute(IKHandRNodeAttribute);
+				IKHandRNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
+				IKHandGunNode->AddChild(IKHandRNode);
+		  }
 
-	// Get a list of morph name mappings
-	TMap<FString, FString> MorphMappings;
-	TArray<TSharedPtr<FJsonValue>> morphList = JsonObject->GetArrayField(TEXT("Morphs"));
-	for (int32 i = 0; i < morphList.Num(); i++)
-	{
-		TSharedPtr<FJsonObject> morph = morphList[i]->AsObject();
-		FString MorphName = morph->GetStringField(TEXT("Name"));
-		FString MorphLabel = morph->GetStringField(TEXT("Label"));
+		  // ik_hand_l
+		  FbxNode* IKHandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_l")));
+		  FbxNode* HandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lHand")));
+		  //FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
+		  if (!IKHandLNode && HandLNode && IKHandGunNode)
+		  {
+				// Create IK Root 
+				FbxSkeleton* IKHandRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_l")));
+				IKHandRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				IKHandRNodeAttribute->Size.Set(1.0);
+				IKHandLNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_l")));
+				IKHandLNode->SetNodeAttribute(IKHandRNodeAttribute);
+				FbxVector4 HandLocation = HandLNode->EvaluateGlobalTransform().GetT();
+				FbxVector4 ParentLocation = IKHandGunNode->EvaluateGlobalTransform().GetT();
+				IKHandLNode->LclTranslation.Set(HandLocation - ParentLocation);
+				IKHandGunNode->AddChild(IKHandLNode);
+		  }
+	 }
 
-		// Daz Studio seems to strip the part of the name before a period when exporting the morph to FBX
-		if (MorphName.Contains(TEXT(".")))
-		{
-			FString Left;
-			MorphName.Split(TEXT("."), &Left, &MorphName);
-		}
+	 // Get a list of morph name mappings
+	 TMap<FString, FString> MorphMappings;
+	 TArray<TSharedPtr<FJsonValue>> morphList = JsonObject->GetArrayField(TEXT("Morphs"));
+	 for (int32 i = 0; i < morphList.Num(); i++)
+	 {
+		  TSharedPtr<FJsonObject> morph = morphList[i]->AsObject();
+		  FString MorphName = morph->GetStringField(TEXT("Name"));
+		  FString MorphLabel = morph->GetStringField(TEXT("Label"));
 
-		if (CachedSettings->UseInternalMorphName)
-		{
-			MorphMappings.Add(MorphName, MorphName);
-		}
-		else
-		{
-			MorphMappings.Add(MorphName, MorphLabel);
-		}
-	}
+		  // Daz Studio seems to strip the part of the name before a period when exporting the morph to FBX
+		  if (MorphName.Contains(TEXT(".")))
+		  {
+			  FString Left;
+			  MorphName.Split(TEXT("."), &Left, &MorphName);
+		  }
 
-	// Get a list of morph name mappings
-	TArray<FString> PoseNameList;
-	const TArray<TSharedPtr<FJsonValue>>* PoseList;
-	if (JsonObject->TryGetArrayField(TEXT("Poses"), PoseList))
-	{
-		PoseNameList.Add(TEXT("ReferencePose"));
-		for (int32 i = 0; i < PoseList->Num(); i++)
-		{
-			TSharedPtr<FJsonObject> Pose = (*PoseList)[i]->AsObject();
-			FString PoseName = Pose->GetStringField(TEXT("Name"));
-			FString PoseLabel = Pose->GetStringField(TEXT("Label"));
+		  if (CachedSettings->UseInternalMorphName)
+		  {
+			  MorphMappings.Add(MorphName, MorphName);
+		  }
+		  else
+		  {
+			  MorphMappings.Add(MorphName, MorphLabel);
+		  }
+	 }
 
-			PoseNameList.Add(PoseLabel);
-		}
-	}
+	 // Get a list of morph name mappings
+	 TArray<FString> PoseNameList;
+	 const TArray<TSharedPtr<FJsonValue>>* PoseList;
+	 if (JsonObject->TryGetArrayField(TEXT("Poses"), PoseList))
+	 {
+		 PoseNameList.Add(TEXT("ReferencePose"));
+		 for (int32 i = 0; i < PoseList->Num(); i++)
+		 {
+			 TSharedPtr<FJsonObject> Pose = (*PoseList)[i]->AsObject();
+			 FString PoseName = Pose->GetStringField(TEXT("Name"));
+			 FString PoseLabel = Pose->GetStringField(TEXT("Label"));
 
-	// Combine clothing and body morphs
-	for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
-	{
-		FbxNode* SceneNode = Scene->GetNode(NodeIndex);
-		if (SceneNode == nullptr)
-		{
-			continue;
-		}
-		FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(SceneNode->GetMesh());
-		if (NodeGeometry)
-		{
+			 PoseNameList.Add(PoseLabel);
+		 }
+	 }
 
-			const int32 BlendShapeDeformerCount = NodeGeometry->GetDeformerCount(FbxDeformer::eBlendShape);
-			for (int32 BlendShapeIndex = 0; BlendShapeIndex < BlendShapeDeformerCount; ++BlendShapeIndex)
-			{
-				FbxBlendShape* BlendShape = (FbxBlendShape*)NodeGeometry->GetDeformer(BlendShapeIndex, FbxDeformer::eBlendShape);
-				const int32 BlendShapeChannelCount = BlendShape->GetBlendShapeChannelCount();
+	 // Combine clothing and body morphs
+	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
+	 {
+		  FbxNode* SceneNode = Scene->GetNode(NodeIndex);
+		  if (SceneNode == nullptr)
+		  {
+				continue;
+		  }
+		  FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(SceneNode->GetMesh());
+		  if (NodeGeometry)
+		  {
 
-				TArray<FbxBlendShapeChannel*> ChannelsToRemove;
-				for (int32 ChannelIndex = 0; ChannelIndex < BlendShapeChannelCount; ++ChannelIndex)
+				const int32 BlendShapeDeformerCount = NodeGeometry->GetDeformerCount(FbxDeformer::eBlendShape);
+				for (int32 BlendShapeIndex = 0; BlendShapeIndex < BlendShapeDeformerCount; ++BlendShapeIndex)
 				{
-					FbxBlendShapeChannel* Channel = BlendShape->GetBlendShapeChannel(ChannelIndex);
-					if (Channel)
-					{
-						FString ChannelName = UTF8_TO_TCHAR(Channel->GetNameOnly());
-						FString NewChannelName, Extra;
-						ChannelName.Split(TEXT("__"), &Extra, &NewChannelName);
-						if (MorphMappings.Contains(NewChannelName))
+					 FbxBlendShape* BlendShape = (FbxBlendShape*)NodeGeometry->GetDeformer(BlendShapeIndex, FbxDeformer::eBlendShape);
+					 const int32 BlendShapeChannelCount = BlendShape->GetBlendShapeChannelCount();
+
+					 TArray<FbxBlendShapeChannel*> ChannelsToRemove;
+					 for (int32 ChannelIndex = 0; ChannelIndex < BlendShapeChannelCount; ++ChannelIndex)
+					 {
+						  FbxBlendShapeChannel* Channel = BlendShape->GetBlendShapeChannel(ChannelIndex);
+						  if (Channel)
+						  {
+								FString ChannelName = UTF8_TO_TCHAR(Channel->GetNameOnly());
+								FString NewChannelName, Extra;
+								ChannelName.Split(TEXT("__"), &Extra, &NewChannelName);
+								if (MorphMappings.Contains(NewChannelName))
+								{
+									 NewChannelName = MorphMappings[NewChannelName];
+									 Channel->SetName(TCHAR_TO_UTF8(*NewChannelName));
+								}
+								else
+								{
+									 ChannelsToRemove.AddUnique(Channel);
+								}
+						  }
+					 }
+					 for (FbxBlendShapeChannel* Channel : ChannelsToRemove)
+					 {
+						  BlendShape->RemoveBlendShapeChannel(Channel);
+					 }
+				}
+		  }
+	 }
+
+	 // Get a list of Materials with name collisions
+	 /*TArray<FString> UniqueMaterialNames;
+	 TArray<FString> DuplicateMaterialNames;
+	 for (int32 MaterialIndex = Scene->GetMaterialCount() - 1; MaterialIndex >= 0; --MaterialIndex)
+	 {
+		 //MaterialProperties.Add(MaterialName
+		 FbxSurfaceMaterial *Material = Scene->GetMaterial(MaterialIndex);
+		 FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+		 if (UniqueMaterialNames.Contains(OriginalMaterialName))
+		 {
+			 DuplciateMaterialNames.Add(OriginalMaterialName);
+		 }
+		 UniqueMaterialNames.AddUnique(OriginalMaterialName);
+	 }
+
+	 // Rename any duplicates adding their shape name
+	 for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
+	 {
+		 FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
+		 FbxNode* GeometryNode = Geometry->GetNode();
+		 for (int32 MaterialIndex = GeometryNode->GetMaterialCount() - 1; MaterialIndex >= 0; --MaterialIndex)
+		 {
+			 FbxSurfaceMaterial *Material = GeometryNode->GetMaterial(MaterialIndex);
+			 FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+			 if (DuplciateMaterialNames.Contains(OriginalMaterialName))
+			 {
+				 FString NewMaterialName = GeometryNode
+			 }
+		 }
+	 }*/
+
+	 // Rename Materials
+	 FbxArray<FbxSurfaceMaterial*> MaterialArray;
+	 Scene->FillMaterialArray(MaterialArray);
+	 TArray<FString> MaterialNames;
+	 for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
+	 {
+		  //MaterialProperties.Add(MaterialName
+		  FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
+		  FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+		  FString NewMaterialName;
+		  if (CachedSettings->UseOriginalMaterialName)
+		  {
+				 NewMaterialName = OriginalMaterialName;
+		  }
+		  else
+		  {
+				 NewMaterialName = AssetName + TEXT("_") + OriginalMaterialName;
+		  }
+		 
+		  NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
+		  Material->SetName(TCHAR_TO_UTF8(*NewMaterialName));
+		  if (MaterialProperties.Contains(NewMaterialName))
+		  {
+				MaterialNames.Add(NewMaterialName);
+		  }
+		  else
+		  {
+				for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
+				{
+					 FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
+					 FbxNode* GeometryNode = Geometry->GetNode();
+					 if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
+					 {
+						  Scene->RemoveGeometry(Geometry);
+					 }
+				}
+				Scene->RemoveMaterial(Material);
+		  }
+
+	 }
+
+	 // Create an exporter.
+	 FbxExporter* Exporter = FbxExporter::Create(SdkManager, "");
+	 int32 FileFormat = -1;
+
+	 // set file format
+	 FileFormat = SdkManager->GetIOPluginRegistry()->FindWriterIDByDescription("FBX ascii (*.fbx)");
+
+	 // Make folders for saving the updated FBX file
+	 FString UpdatedFBXFolder = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX");
+	 FString UpdatedFBXFile = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX") / FPaths::GetCleanFilename(FBXPath);
+	 if (!MakeDirectoryAndCheck(UpdatedFBXFolder)) return false;
+
+	 // Initialize the exporter by providing a filename.
+	 if (!Exporter->Initialize(TCHAR_TO_UTF8(*UpdatedFBXFile), FileFormat, SdkManager->GetIOSettings()))
+	 {
+		  return false;
+	 }
+
+	 // Export the scene.
+	 bool Status = Exporter->Export(Scene);
+
+	 // Destroy the exporter.
+	 Exporter->Destroy();
+
+	 // If this is a character, determine the type.
+	 DazCharacterType CharacterType = DazCharacterType::Unknown;
+	 FString CharacterTypeName = RootBoneName.Replace(TEXT("\0"), TEXT(""));
+	 if (RootBoneName == TEXT("Genesis3Male"))
+	 {
+		  CharacterType = DazCharacterType::Genesis3Male;
+	 }
+	 else if (RootBoneName == TEXT("Genesis3Female"))
+	 {
+		  CharacterType = DazCharacterType::Genesis3Female;
+	 }
+	 else if (RootBoneName == TEXT("Genesis8Male"))
+	 {
+		  CharacterType = DazCharacterType::Genesis8Male;
+	 }
+	 else if (RootBoneName == TEXT("Genesis8Female"))
+	 {
+		  CharacterType = DazCharacterType::Genesis8Female;
+	 }
+	 else if (RootBoneName == TEXT("Genesis"))
+	 {
+		  CharacterType = DazCharacterType::Genesis1;
+	 }
+
+	 // Import Textures
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
+	 {
+		  TArray<FString> TexturesFilesToImport;
+		  for (auto TexturePair : TextureFileSourceToTarget)
+		  {
+				FString SourceFileName = TexturePair.Key;
+				FString TargetFileName = ImportCharacterTexturesFolder / TexturePair.Value + FPaths::GetExtension(SourceFileName, true);
+				PlatformFile.CopyFile(*TargetFileName, *SourceFileName);
+				TexturesFilesToImport.Add(TargetFileName);
+		  }
+		  ImportTextureAssets(TexturesFilesToImport, CharacterTexturesFolder);
+	 }
+
+	 // Create Intermediate Materials
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
+	 {
+		 // Create a default Master Subsurface Profile if needed
+		 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, MaterialProperties);
+
+		  for (FString IntermediateMaterialName : IntermediateMaterials)
+		  {
+				TArray<FString> ChildMaterials;
+				FString ChildMaterialFolder = CharacterMaterialFolder;
+				for (FString ChildMaterialName : MaterialNames)
+				{
+					 if (MaterialProperties.Contains(ChildMaterialName))
+					 {
+						  for (FDUFTextureProperty ChildProperty : MaterialProperties[ChildMaterialName])
+						  {
+								if ((ChildProperty.ObjectName + TEXT("_BaseMat")) == IntermediateMaterialName)
+								{
+									 ChildMaterialFolder = CharacterMaterialFolder / ChildProperty.ObjectName;
+									 ChildMaterials.AddUnique(ChildMaterialName);
+								}
+						  }
+					 }
+				}
+
+				if (ChildMaterials.Num() > 1)
+				{
+
+
+					 // Copy Material Properties
+					 TArray<FDUFTextureProperty> MostCommonProperties = FDazToUnrealMaterials::GetMostCommonProperties(ChildMaterials, MaterialProperties);
+					 MaterialProperties.Add(IntermediateMaterialName, MostCommonProperties);
+					 //MaterialProperties[IntermediateMaterialName] = MaterialProperties[ChildMaterials[0]];
+
+
+					 // Create Material
+					 FSoftObjectPath BaseMaterialPath = FDazToUnrealMaterials::GetMostCommonBaseMaterial(ChildMaterials, MaterialProperties);//FDazToUnrealMaterials::GetBaseMaterial(ChildMaterials[0], MaterialProperties[IntermediateMaterialName]);
+					 UObject* BaseMaterial = BaseMaterialPath.TryLoad();
+					 UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, nullptr, MasterSubsurfaceProfile);
+					 UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
+					 for (FString MaterialName : ChildMaterials)
+					 {
+						USubsurfaceProfile* SubsurfaceProfile = MasterSubsurfaceProfile;
+						if (!FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(MasterSubsurfaceProfile, MaterialProperties[MaterialName]))
 						{
-							NewChannelName = MorphMappings[NewChannelName];
-							Channel->SetName(TCHAR_TO_UTF8(*NewChannelName));
+							SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(MaterialName, ChildMaterialFolder, MaterialProperties[MaterialName]);
+						}
+
+						if (FDazToUnrealMaterials::GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]) == BaseMaterialPath)
+						{
+
+							int32 Length = MaterialProperties[MaterialName].Num();
+							for (int32 Index = Length - 1; Index >= 0; Index--)
+							{
+								FDUFTextureProperty ChildPropertyForRemoval = MaterialProperties[MaterialName][Index];
+								if (ChildPropertyForRemoval.Name == TEXT("Asset Type")) continue;
+								for (FDUFTextureProperty ParentProperty : MaterialProperties[IntermediateMaterialName])
+								{
+									if (ParentProperty.Name == ChildPropertyForRemoval.Name && ParentProperty.Value == ChildPropertyForRemoval.Value)
+									{
+											MaterialProperties[MaterialName].RemoveAt(Index);
+											break;
+									}
+								}
+							}
+
+							FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, UnrealMaterialConstant, SubsurfaceProfile);
 						}
 						else
 						{
-							ChannelsToRemove.AddUnique(Channel);
+							FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
 						}
-					}
+					 }
 				}
-				for (FbxBlendShapeChannel* Channel : ChannelsToRemove)
+				else if (ChildMaterials.Num() == 1)
 				{
-					BlendShape->RemoveBlendShapeChannel(Channel);
+					USubsurfaceProfile* SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(ChildMaterials[0], CharacterMaterialFolder / ChildMaterials[0], MaterialProperties[ChildMaterials[0]]);
+					FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder / IntermediateMaterialName, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
 				}
-			}
-		}
-	}
 
-	// Get a list of Materials with name collisions
-	/*TArray<FString> UniqueMaterialNames;
-	TArray<FString> DuplicateMaterialNames;
-	for (int32 MaterialIndex = Scene->GetMaterialCount() - 1; MaterialIndex >= 0; --MaterialIndex)
-	{
-		//MaterialProperties.Add(MaterialName
-		FbxSurfaceMaterial *Material = Scene->GetMaterial(MaterialIndex);
-		FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-		if (UniqueMaterialNames.Contains(OriginalMaterialName))
-		{
-			DuplciateMaterialNames.Add(OriginalMaterialName);
-		}
-		UniqueMaterialNames.AddUnique(OriginalMaterialName);
-	}
+		  }
+	 }
 
-	// Rename any duplicates adding their shape name
-	for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
-	{
-		FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
-		FbxNode* GeometryNode = Geometry->GetNode();
-		for (int32 MaterialIndex = GeometryNode->GetMaterialCount() - 1; MaterialIndex >= 0; --MaterialIndex)
-		{
-			FbxSurfaceMaterial *Material = GeometryNode->GetMaterial(MaterialIndex);
-			FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-			if (DuplciateMaterialNames.Contains(OriginalMaterialName))
-			{
-				FString NewMaterialName = GeometryNode
-			}
-		}
-	}*/
+	 // Import FBX
+	 UObject* NewObject = ImportFBXAsset(UpdatedFBXFile, CharacterFolder, AssetType, CharacterType, CharacterTypeName);
 
-	// Rename Materials
-	FbxArray<FbxSurfaceMaterial*> MaterialArray;
-	Scene->FillMaterialArray(MaterialArray);
-	TArray<FString> MaterialNames;
-	for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
-	{
-		//MaterialProperties.Add(MaterialName
-		FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
-		FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-		bool UseOriginalMat = CachedSettings->UseOriginalMaterialName;
-		FString NewMaterialName;
-		NewMaterialName = FDazToUnrealUtils::MaterialName(OriginalMaterialName, AssetName, UseOriginalMat);
-		Material->SetName(TCHAR_TO_UTF8(*NewMaterialName));
-		if (MaterialProperties.Contains(NewMaterialName))
-		{
-			MaterialNames.Add(NewMaterialName);
-		}
-		else
-		{
-			for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
-			{
-				FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
-				FbxNode* GeometryNode = Geometry->GetNode();
-				if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
-				{
-					Scene->RemoveGeometry(Geometry);
-				}
-			}
-			Scene->RemoveMaterial(Material);
-		}
+	 // If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
+	 if (AssetType == DazAssetType::Pose)
+	 {
+		 if (UAnimSequence* AnimSequence = Cast<UAnimSequence>(NewObject))
+		 {
+			 UPoseAsset* NewPoseAsset = FDazToUnrealPoses::CreatePoseAsset(AnimSequence, PoseNameList);
 
-	}
+			 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+			 TArray<UObject*> AssetsToSelect;
+			 AssetsToSelect.Add((UObject*)NewPoseAsset);
+			 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
+		 }
+	 }
 
-	// Create an exporter.
-	FbxExporter* Exporter = FbxExporter::Create(SdkManager, "");
-	int32 FileFormat = -1;
+	 // Create and attach the Joint Control Anim
+	 if (AssetType == DazAssetType::SkeletalMesh)
+	 {
+		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
+		 {
+			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, SkeletalMesh->Skeleton, SkeletalMesh))
+			 {
+				 //JointControlAnim->CurrentSkeleton = SkeletalMesh->Skeleton;
+				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();
+			 }
+		 }
+		 
+	 }
 
-	// set file format
-	FileFormat = SdkManager->GetIOPluginRegistry()->FindWriterIDByDescription("FBX ascii (*.fbx)");
-
-	// Make folders for saving the updated FBX file
-	FString UpdatedFBXFolder = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX");
-	FString UpdatedFBXFile = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX") / FPaths::GetCleanFilename(FBXPath);
-	if (!MakeDirectoryAndCheck(UpdatedFBXFolder)) return false;
-
-	// Initialize the exporter by providing a filename.
-	if (!Exporter->Initialize(TCHAR_TO_UTF8(*UpdatedFBXFile), FileFormat, SdkManager->GetIOSettings()))
-	{
-		return false;
-	}
-
-	// Export the scene.
-	bool Status = Exporter->Export(Scene);
-
-	// Destroy the exporter.
-	Exporter->Destroy();
-
-	// If this is a character, determine the type.
-	DazCharacterType CharacterType = DazCharacterType::Unknown;
-	FString CharacterTypeName = RootBoneName.Replace(TEXT("\0"), TEXT(""));
-	if (RootBoneName == TEXT("Genesis3Male"))
-	{
-		CharacterType = DazCharacterType::Genesis3Male;
-	}
-	else if (RootBoneName == TEXT("Genesis3Female"))
-	{
-		CharacterType = DazCharacterType::Genesis3Female;
-	}
-	else if (RootBoneName == TEXT("Genesis8Male"))
-	{
-		CharacterType = DazCharacterType::Genesis8Male;
-	}
-	else if (RootBoneName == TEXT("Genesis8Female"))
-	{
-		CharacterType = DazCharacterType::Genesis8Female;
-	}
-	else if (RootBoneName == TEXT("Genesis"))
-	{
-		CharacterType = DazCharacterType::Genesis1;
-	}
-
-	// Import Textures
-	if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
-	{
-		TArray<FString> TexturesFilesToImport;
-		for (auto TexturePair : TextureFileSourceToTarget)
-		{
-			FString SourceFileName = TexturePair.Key;
-			FString TargetFileName = ImportCharacterTexturesFolder / TexturePair.Value + FPaths::GetExtension(SourceFileName, true);
-			PlatformFile.CopyFile(*TargetFileName, *SourceFileName);
-			TexturesFilesToImport.Add(TargetFileName);
-		}
-		ImportTextureAssets(TexturesFilesToImport, CharacterTexturesFolder);
-	}
-
-	// Create Intermediate Materials
-	if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::Material)
-	{
-		// Create a default Master Subsurface Profile if needed
-		USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, MaterialProperties);
-
-		for (FString IntermediateMaterialName : IntermediateMaterials)
-		{
-			TArray<FString> ChildMaterials;
-			FString ChildMaterialFolder = CharacterMaterialFolder;
-			for (FString ChildMaterialName : MaterialNames)
-			{
-				if (MaterialProperties.Contains(ChildMaterialName))
-				{
-					for (FDUFTextureProperty ChildProperty : MaterialProperties[ChildMaterialName])
-					{
-						if ((ChildProperty.ObjectName + TEXT("_BaseMat")) == IntermediateMaterialName)
-						{
-							ChildMaterialFolder = CharacterMaterialFolder / ChildProperty.ObjectName;
-							ChildMaterials.AddUnique(ChildMaterialName);
-						}
-					}
-				}
-			}
-
-			if (ChildMaterials.Num() > 1)
-			{
-
-
-				// Copy Material Properties
-				TArray<FDUFTextureProperty> MostCommonProperties = FDazToUnrealMaterials::GetMostCommonProperties(ChildMaterials, MaterialProperties);
-				MaterialProperties.Add(IntermediateMaterialName, MostCommonProperties);
-				//MaterialProperties[IntermediateMaterialName] = MaterialProperties[ChildMaterials[0]];
-
-
-				// Create Material
-				FSoftObjectPath BaseMaterialPath = FDazToUnrealMaterials::GetMostCommonBaseMaterial(ChildMaterials, MaterialProperties);//FDazToUnrealMaterials::GetBaseMaterial(ChildMaterials[0], MaterialProperties[IntermediateMaterialName]);
-				UObject* BaseMaterial = BaseMaterialPath.TryLoad();
-				UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, nullptr, MasterSubsurfaceProfile);
-				UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
-				for (FString MaterialName : ChildMaterials)
-				{
-					USubsurfaceProfile* SubsurfaceProfile = MasterSubsurfaceProfile;
-					if (!FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(MasterSubsurfaceProfile, MaterialProperties[MaterialName]))
-					{
-						SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(MaterialName, ChildMaterialFolder, MaterialProperties[MaterialName]);
-					}
-					FSoftObjectPath BaseChildMaterialPath = FDazToUnrealMaterials::GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]);
-					UObject* BaseChildMaterial = BaseChildMaterialPath.TryLoad();
-					if (BaseChildMaterialPath == BaseMaterialPath)
-					{
-
-						int32 Length = MaterialProperties[MaterialName].Num();
-						for (int32 Index = Length - 1; Index >= 0; Index--)
-						{
-							FDUFTextureProperty ChildPropertyForRemoval = MaterialProperties[MaterialName][Index];
-							if (ChildPropertyForRemoval.Name == TEXT("Asset Type")) continue;
-							for (FDUFTextureProperty ParentProperty : MaterialProperties[IntermediateMaterialName])
-							{
-								if (ParentProperty.Name == ChildPropertyForRemoval.Name && ParentProperty.Value == ChildPropertyForRemoval.Value)
-								{
-									MaterialProperties[MaterialName].RemoveAt(Index);
-									break;
-								}
-							}
-						}
-
-						FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, UnrealMaterialConstant, SubsurfaceProfile);
-					}
-					else
-					{
-						FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
-					}
-				}
-			}
-			else if (ChildMaterials.Num() == 1)
-			{
-				USubsurfaceProfile* SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(ChildMaterials[0], CharacterMaterialFolder / ChildMaterials[0], MaterialProperties[ChildMaterials[0]]);
-				FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder / IntermediateMaterialName, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
-			}
-
-		}
-	}
-
-	// Import FBX
-	UObject* NewObject = ImportFBXAsset(UpdatedFBXFile, CharacterFolder, AssetType, CharacterType, CharacterTypeName);
-
-	// If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
-	if (AssetType == DazAssetType::Pose)
-	{
-		if (UAnimSequence* AnimSequence = Cast<UAnimSequence>(NewObject))
-		{
-			UPoseAsset* NewPoseAsset = FDazToUnrealPoses::CreatePoseAsset(AnimSequence, PoseNameList);
-
-			FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
-			TArray<UObject*> AssetsToSelect;
-			AssetsToSelect.Add((UObject*)NewPoseAsset);
-			ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
-		}
-	}
-	return NewObject;
+	 return NewObject;
 }
+
 
 
 /*bool FDazToUnrealModule::CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType)

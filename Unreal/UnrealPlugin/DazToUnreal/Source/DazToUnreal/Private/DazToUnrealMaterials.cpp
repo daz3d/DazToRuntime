@@ -376,8 +376,11 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 
 	// Create the Material Instance
 	auto MaterialInstanceFactory = NewObject<UMaterialInstanceConstantFactoryNew>();
-
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION < 26
 	UPackage* Package = CreatePackage(nullptr, *(CharacterMaterialFolder / MaterialName));
+#else
+	UPackage* Package = CreatePackage(*(CharacterMaterialFolder / MaterialName));
+#endif
 	UMaterialInstanceConstant* UnrealMaterialConstant = (UMaterialInstanceConstant*)MaterialInstanceFactory->FactoryCreateNew(UMaterialInstanceConstant::StaticClass(), Package, *MaterialName, RF_Standalone | RF_Public, NULL, GWarn);
 
 
@@ -696,7 +699,11 @@ USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(co
 	}
 
 	FString SubsurfaceProfileName = MaterialName + TEXT("_Profile");
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION < 26
 	UPackage* Package = CreatePackage(nullptr, *(CharacterMaterialFolder / MaterialName));
+#else
+	UPackage* Package = CreatePackage(*(CharacterMaterialFolder / MaterialName));
+#endif
 	//USubsurfaceProfile* SubsurfaceProfile = (USubsurfaceProfile*)SubsurfaceProfileFactory->FactoryCreateNew(USubsurfaceProfile::StaticClass(), Package, *MaterialName, RF_Standalone | RF_Public, NULL, GWarn);
 	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 	USubsurfaceProfile* SubsurfaceProfile = Cast<USubsurfaceProfile>(AssetToolsModule.Get().CreateAsset(SubsurfaceProfileName, FPackageName::GetLongPackagePath(*(CharacterMaterialFolder / MaterialName)), USubsurfaceProfile::StaticClass(), NULL));

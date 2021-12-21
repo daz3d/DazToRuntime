@@ -24,6 +24,7 @@
 
 #include "DzUnrealDialog.h"
 #include "DzUnrealAction.h"
+#include "DzUnrealMorphSelectionDialog.h"
 
 DzUnrealAction::DzUnrealAction() :
 	 DzRuntimePluginAction(tr("&Daz to Unreal"), tr("Send the selected node to Unreal."))
@@ -165,10 +166,42 @@ void DzUnrealAction::WriteConfiguration()
 					writer.finishObject();
 			  }
 		 }
-
 		 writer.finishArray();
 
-
+		 if (ExportMorphs)
+		 {
+			 DzMainWindow* mw = dzApp->getInterface();
+			 DzUnrealMorphSelectionDialog* morphDialog = DzUnrealMorphSelectionDialog::Get(mw);
+			 if (morphDialog->IsAutoJCMEnabled())
+			 {
+				 writer.startMemberArray("JointLinks", true);
+				 QList<JointLinkInfo> JointLinks = morphDialog->GetActiveJointControlledMorphs(Selection);
+				 foreach(JointLinkInfo linkInfo, JointLinks)
+				 {
+					 writer.startObject(true);
+					 writer.addMember("Bone", linkInfo.Bone);
+					 writer.addMember("Axis", linkInfo.Axis);
+					 writer.addMember("Morph", linkInfo.Morph);
+					 writer.addMember("Scalar", linkInfo.Scalar);
+					 writer.addMember("Alpha", linkInfo.Alpha);
+					 if (linkInfo.Keys.count() > 0)
+					 {
+						 writer.startMemberArray("Keys", true);
+						 foreach(JointLinkKey key, linkInfo.Keys)
+						 {
+							 writer.startObject(true);
+							 writer.addMember("Angle", key.Angle);
+							 writer.addMember("Value", key.Value);
+							 writer.finishObject();
+						 }
+						 writer.finishArray();
+					 }
+					 writer.finishObject();
+				 }
+				 writer.finishArray();
+			 }
+		 }
+		 
 		 writer.startMemberArray("Subdivisions", true);
 		 if (ExportSubdivisions)
 			 SubdivisionDialog->WriteSubdivisions(writer);
@@ -387,7 +420,8 @@ QUuid DzUnrealAction::WriteInstance(DzNode* Node, DzJsonWriter& Writer, QUuid Pa
 	QString FileName = File.fileName();
 	QStringList Items = FileName.split("/");
 	QStringList Parts = Items[Items.count() - 1].split(".");
-	QString Name = Parts[0].remove(QRegExp("[^A-Za-z0-9_]"));
+	QString AssetID = Node->getAssetUri().getId();
+	QString Name = AssetID.remove(QRegExp("[^A-Za-z0-9_]"));
 	QUuid Uid = QUuid::createUuid();
 
 	Writer.startObject(true);
