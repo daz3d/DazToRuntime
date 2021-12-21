@@ -23,9 +23,15 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 		double InstanceYPos = Instance->GetNumberField(TEXT("TranslationZ"));
 		double InstanceZPos = Instance->GetNumberField(TEXT("TranslationY"));
 
-		double InstanceXRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationZ")));
-		double InstanceYRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationY"))) * -1.0f;
-		double InstanceZRot = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationX")));
+		double Pitch = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationZ")));
+		double Yaw = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationY"))) * -1.0f;
+		double Roll = FMath::RadiansToDegrees(Instance->GetNumberField(TEXT("RotationX")));
+
+		// Apply the rotations in the correct order
+		FQuat PitchQuat(FRotator(Pitch, 0.0f, 0.0f));
+		FQuat YawQuat(FRotator(0.0f, Yaw, 0.0f));
+		FQuat RollQuat(FRotator(0.0f, 0.0f, Roll));
+		FQuat Quat = PitchQuat * YawQuat * RollQuat;
 
 		double ScaleXPos = Instance->GetNumberField(TEXT("ScaleX"));
 		double ScaleYPos = Instance->GetNumberField(TEXT("ScaleZ"));
@@ -42,7 +48,8 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 		if (InstanceObject)
 		{
 			FVector Location = FVector(InstanceXPos, InstanceYPos, InstanceZPos);
-			FRotator Rotation = FRotator(InstanceXRot, InstanceYRot, InstanceZRot);
+			FRotator Rotation = Quat.Rotator();
+
 			AActor* NewActor = UEditorLevelLibrary::SpawnActorFromObject(InstanceObject, Location, Rotation);
 			if (NewActor)
 			{
