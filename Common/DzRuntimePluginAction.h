@@ -25,6 +25,8 @@ protected:
 	 QString ImportFolder;
 	 QString CharacterFolder;
 	 QString CharacterFBX;
+	 QString CharacterBaseFBX;
+	 QString CharacterHDFBX;
 	 QString AssetType;
 	 QString MorphString;
 	 QString FBXVersion;
@@ -33,6 +35,7 @@ protected:
 
 	 bool ExportMorphs;
 	 bool ExportSubdivisions;
+	 bool ExportBaseMesh;
 	 bool ShowFbxDialog;
 	 bool ExportMaterialPropertiesCSV;
 	 DzNode* Selection;
@@ -64,4 +67,7 @@ protected:
 
 	 // For Pose exports check if writing to the timeline will alter existing keys
 	 bool CheckIfPoseExportIsDestructive();
+
+	 // Need to be able to move asset instances to origin during environment export
+	 void UnlockTranform(DzNode* NodeToUnlock);
 };

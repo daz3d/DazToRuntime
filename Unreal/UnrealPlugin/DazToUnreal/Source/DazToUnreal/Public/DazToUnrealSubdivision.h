@@ -56,13 +56,8 @@ THIRD_PARTY_INCLUDES_END
 #pragma warning( pop )
 // end of fbx include
 
-class FDazToUnrealFbx
+class FDazToUnrealSubdivision
 {
 public:
-	static void RenameDuplicateBones(FbxNode* RootNode);
-	static void FixClusterTranformLinks(FbxScene* Scene, FbxNode* RootNode);
-	static void RemoveBindPoses(FbxScene* Scene);
-	static void AddWeightsToAllNodes(FbxNode* Parent);
-private:
-	static void RenameDuplicateBones(FbxNode* RootNode, TMap<FString, int>& ExistingBones);
+	static void SubdivideMesh(FbxNode* BaseNode, FbxNode* TranferWeightsToNode, int SubdLevel);
 };
