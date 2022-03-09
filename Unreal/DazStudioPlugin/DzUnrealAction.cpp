@@ -18,6 +18,7 @@
 #include <dzfigure.h>
 #include <dzfacetmesh.h>
 #include <dzbone.h>
+#include <dzgroupnode.h>
 //#include <dznodeinstance.h>
 #include "idzsceneasset.h"
 #include "dzuri.h"
@@ -385,10 +386,16 @@ void DzUnrealAction::WriteInstances(DzNode* Node, DzJsonWriter& Writer, QMap<QSt
 	DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
 	DzGeometry* Geometry = Shape ? Shape->getGeometry() : NULL;
 	DzBone* Bone = qobject_cast<DzBone*>(Node);
+	DzGroupNode* GroupNode = qobject_cast<DzGroupNode*>(Node);
 
 	if (Bone == nullptr && Geometry)
 	{
 		ExportedGeometry.append(Geometry);
+		ParentID = WriteInstance(Node, Writer, ParentID);
+	}
+
+	if (GroupNode)
+	{
 		ParentID = WriteInstance(Node, Writer, ParentID);
 	}
 
@@ -403,12 +410,17 @@ QUuid DzUnrealAction::WriteInstance(DzNode* Node, DzJsonWriter& Writer, QUuid Pa
 {
 	QString Path = Node->getAssetFileInfo().getUri().getFilePath();
 	QFile File(Path);
-	QString FileName = File.fileName();
-	QStringList Items = FileName.split("/");
-	QStringList Parts = Items[Items.count() - 1].split(".");
 	QString AssetID = Node->getAssetUri().getId();
 	QString Name = AssetID.remove(QRegExp("[^A-Za-z0-9_]"));
 	QUuid Uid = QUuid::createUuid();
+
+	// Group Node needs an empty InstanceAsset
+	DzGroupNode* GroupNode = qobject_cast<DzGroupNode*>(Node);
+	if (GroupNode)
+	{
+		Name = "";
+	}
+
 
 	Writer.startObject(true);
 	Writer.addMember("Version", 1);

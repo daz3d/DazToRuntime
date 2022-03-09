@@ -11,7 +11,7 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 	TArray<TSharedPtr<FJsonValue>> InstanceList = JsonObject->GetArrayField(TEXT("Instances"));
 	TMap<FString, AActor*> GuidToActor;
-	TMap<FString, FString> ParentToChild;
+	TMap<FString, TArray<FString>> ParentToChild;
 	for (int32 Index = 0; Index< InstanceList.Num(); Index++)
 	{
 		TSharedPtr<FJsonObject> Instance = InstanceList[Index]->AsObject();
@@ -40,9 +40,19 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 		FString ParentId = Instance->GetStringField(TEXT("ParentID"));
 		FString InstanceId = Instance->GetStringField(TEXT("Guid"));
 
+		// Make the child list if needed
+		if (!ParentToChild.Contains(ParentId))
+		{
+			ParentToChild.Add(ParentId, TArray<FString>());
+		}
+
 		// Find the asset for this instance
-		FString AssetPath = CachedSettings->ImportDirectory.Path / InstanceAssetName / InstanceAssetName + TEXT(".") + InstanceAssetName;
-		UObject* InstanceObject = LoadObject<UObject>(NULL, *AssetPath, NULL, LOAD_None, NULL);
+		UObject* InstanceObject = nullptr;
+		if (InstanceAssetName.Len() > 0)
+		{
+			FString AssetPath = CachedSettings->ImportDirectory.Path / InstanceAssetName / InstanceAssetName + TEXT(".") + InstanceAssetName;
+			InstanceObject = LoadObject<UObject>(NULL, *AssetPath, NULL, LOAD_None, NULL);
+		}
 
 		// Spawn the object into the scene
 		if (InstanceObject)
@@ -55,7 +65,25 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 			{
 				NewActor->SetActorScale3D(FVector(ScaleXPos, ScaleYPos, ScaleZPos));
 				GuidToActor.Add(InstanceId, NewActor);
-				ParentToChild.Add(ParentId, InstanceId);
+				ParentToChild[ParentId].Add(InstanceId);
+			}
+		}
+		else
+		{
+			// If we didn't find the object, or it was a group node spawn a dummy actor
+			FVector Location = FVector(InstanceXPos, InstanceYPos, InstanceZPos);
+			FRotator Rotation = Quat.Rotator();
+
+			AActor* NewActor = UEditorLevelLibrary::SpawnActorFromClass(AActor::StaticClass(), Location, Rotation);
+			if (NewActor)
+			{
+				NewActor->SetActorScale3D(FVector(ScaleXPos, ScaleYPos, ScaleZPos));
+				if (USceneComponent* ParentDefaultAttachComponent = NewActor->GetDefaultAttachComponent())
+				{
+					ParentDefaultAttachComponent->Mobility = EComponentMobility::Static;
+				}
+				GuidToActor.Add(InstanceId, NewActor);
+				ParentToChild[ParentId].Add(InstanceId);
 			}
 		}
 	}
@@ -63,11 +91,14 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 	// Re-create the hierarchy from Daz Studio
 	for (auto Pair : ParentToChild)
 	{
-		if (GuidToActor.Contains(Pair.Key) && GuidToActor.Contains(Pair.Value))
+		for (FString ChildGuid : Pair.Value)
 		{
-			AActor* ParentActor = GuidToActor[Pair.Key];
-			AActor* ChildActor = GuidToActor[Pair.Value];
-			ChildActor->AttachToActor(ParentActor, FAttachmentTransformRules::KeepWorldTransform);
+			if (GuidToActor.Contains(Pair.Key) && GuidToActor.Contains(ChildGuid))
+			{
+				AActor* ParentActor = GuidToActor[Pair.Key];
+				AActor* ChildActor = GuidToActor[ChildGuid];
+				ChildActor->AttachToActor(ParentActor, FAttachmentTransformRules::KeepWorldTransform);
+			}
 		}
 	}
 
