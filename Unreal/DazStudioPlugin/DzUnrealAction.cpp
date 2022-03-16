@@ -19,6 +19,7 @@
 #include <dzfacetmesh.h>
 #include <dzbone.h>
 #include <dzgroupnode.h>
+#include <dzinstancenode.h>
 //#include <dznodeinstance.h>
 #include "idzsceneasset.h"
 #include "dzuri.h"
@@ -387,6 +388,7 @@ void DzUnrealAction::WriteInstances(DzNode* Node, DzJsonWriter& Writer, QMap<QSt
 	DzGeometry* Geometry = Shape ? Shape->getGeometry() : NULL;
 	DzBone* Bone = qobject_cast<DzBone*>(Node);
 	DzGroupNode* GroupNode = qobject_cast<DzGroupNode*>(Node);
+	DzInstanceNode* InstanceNode = qobject_cast<DzInstanceNode*>(Node);
 
 	if (Bone == nullptr && Geometry)
 	{
@@ -395,6 +397,11 @@ void DzUnrealAction::WriteInstances(DzNode* Node, DzJsonWriter& Writer, QMap<QSt
 	}
 
 	if (GroupNode)
+	{
+		ParentID = WriteInstance(Node, Writer, ParentID);
+	}
+
+	if (InstanceNode)
 	{
 		ParentID = WriteInstance(Node, Writer, ParentID);
 	}
@@ -419,6 +426,14 @@ QUuid DzUnrealAction::WriteInstance(DzNode* Node, DzJsonWriter& Writer, QUuid Pa
 	if (GroupNode)
 	{
 		Name = "";
+	}
+
+	// Group Node needs an empty InstanceAsset
+	DzInstanceNode* InstanceNode = qobject_cast<DzInstanceNode*>(Node);
+	if (InstanceNode)
+	{
+		AssetID = InstanceNode->getTarget()->getAssetUri().getId();
+		Name = AssetID.remove(QRegExp("[^A-Za-z0-9_]"));
 	}
 
 
