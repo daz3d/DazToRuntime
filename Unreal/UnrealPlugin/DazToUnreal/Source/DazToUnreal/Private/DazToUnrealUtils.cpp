@@ -22,7 +22,7 @@ bool FDazToUnrealUtils::MakeDirectoryAndCheck(FString& Directory)
 	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 	if (!FPaths::DirectoryExists(Directory))
 	{
-		PlatformFile.CreateDirectory(*Directory);
+		PlatformFile.CreateDirectoryTree(*Directory);
 		if (!FPaths::DirectoryExists(Directory))
 		{
 			return false;
