@@ -67,6 +67,7 @@ namespace Daz3D
 			OmUberSurface,
 			OOTHairblendingHair,
 			BlendedDualLobeHair, //used in some dforce hairs
+			PBRSkin,
 		}
 
 		/// <summary>
@@ -265,6 +266,20 @@ namespace Daz3D
 			mat.SetShaderPassEnabled("TransparentBackface",false);
 			mat.SetOverrideTag("MotionVector","User");
 
+			if(matNameLower.Contains("eyelash"))
+			{
+				//we don't want specular reflections on the transparent part of the material for eyelashes, it's not a "wet" mat or lens
+				if(mat.HasProperty("_EnableBlendModePreserveSpecularLighting"))
+				{
+					mat.SetFloat("_EnableBlendModePreserveSpecularLighting",0);
+				}
+
+				//most eyelashes come in with a roughness of 0.1 when we really should be mostly rough, this hardcodes the eyelash so it looks better
+				if(mat.HasProperty("_Roughness"))
+				{
+					mat.SetFloat("_Roughness",0.9f);
+				}
+			}
 
 			if(isDoubleSided)
 			{
@@ -1807,6 +1822,173 @@ namespace Daz3D
 			return mat;
 
 		}
+
+
+		public Material ConvertToUnityPBRSkin(DTUMaterial dtuMaterial, string materialDir)
+		{
+
+			var uvSet = dtuMaterial.Get("UV Set");
+			var smoothOn = dtuMaterial.Get("Smooth On");
+			var smoothAngle = dtuMaterial.Get("Smooth Angle");
+
+			var linePreviewColor = dtuMaterial.Get("Line Preview Color");
+			var lineStartWidth = dtuMaterial.Get("Line Start Width");
+			var lineEndWidth = dtuMaterial.Get("Line End Width");
+			var lineUVWidth = dtuMaterial.Get("Line UV Width");
+
+			var renderPriority = dtuMaterial.Get("Render Priority");
+			var propagatePriority = dtuMaterial.Get("Propagate Priority");
+			var followBlend = dtuMaterial.Get("Follow Blend");
+			var outlineColorId = dtuMaterial.Get("OutlineColorID");
+			var metallicityEnable = dtuMaterial.Get("Metallicity Enable");
+			var metallicWeight = dtuMaterial.Get("Metallic Weight");
+			var diffuseEnable = dtuMaterial.Get("Diffuse Enable");
+			var diffuseColor = dtuMaterial.Get("Diffuse Color");
+			var diffuseRoughness = dtuMaterial.Get("Diffuse Roughness");
+			var translucencyEnable = dtuMaterial.Get("Translucency Enable");
+			var translucencyWeight = dtuMaterial.Get("Translucency Weight");
+			var translucencyColor = dtuMaterial.Get("Translucency Color");
+			var invertTransmissionNormal = dtuMaterial.Get("Invert Transmission Normal");
+			var dualLobeSpecularEnable = dtuMaterial.Get("Dual Lobe Specular Enable");
+			var dualLobeSpecularReflectivity = dtuMaterial.Get("Dual Lobe Specular Reflectivity");
+			var dualLobeSpecularRoughnessMult = dtuMaterial.Get("Dual Lobe Specular Roughness Mult");
+			var specularLobe1Roughness = dtuMaterial.Get("Specular Lobe 1 Roughness");
+			var specularLobe2RoughnessMult = dtuMaterial.Get("Specular Lobe 2 Roughness Mult");
+			var dualLobeSpecularRatio = dtuMaterial.Get("Dual Lobe Specular Ratio");
+			var bumpEnable = dtuMaterial.Get("Bump Enable");
+			var bumpStrength = dtuMaterial.Get("Bump Strength");
+			var normalMap = dtuMaterial.Get("Normal Map");
+			var makeupEnable = dtuMaterial.Get("Makeup Enable");
+			var makeupWeight = dtuMaterial.Get("Makeup Weight");
+			var makeupBaseColor = dtuMaterial.Get("Makeup Base Color");
+			var makeupRoughnessMult = dtuMaterial.Get("Makeup Roughness Mult");
+			var makeupMetallicityEnable = dtuMaterial.Get("Makeup Metallicity Enable");
+			var specularOcclusionEnable = dtuMaterial.Get("Specular Occlusion Enable");
+			var ambientOcclusionWeight = dtuMaterial.Get("Ambient Occlusion Weight");
+			var specularOcclusionGrazing = dtuMaterial.Get("Specular Occlusion Grazing");
+			var specularOcclusionFacing = dtuMaterial.Get("Specular Occlusion Facing");
+			var detailEnable = dtuMaterial.Get("Detail Enable");
+			var detailWeight = dtuMaterial.Get("Detail Weight");
+			var detailHorizontalTiles = dtuMaterial.Get("Detail Horizontal Tiles");
+			var detailHorizontalOffset = dtuMaterial.Get("Detail Horizontal Offset");
+			var detailVerticalTiles = dtuMaterial.Get("Detail Vertical Tiles");
+			var detailVerticalOffset = dtuMaterial.Get("Detail Vertical Offset");
+			var detailNormalMapMode = dtuMaterial.Get("Detail Normal Map Mode");
+			var detailNormalMap = dtuMaterial.Get("Detail Normal Map");
+			var detailSpecularRoughnessMult = dtuMaterial.Get("Detail Specular Roughness Mult");
+			var topCoatEnable = dtuMaterial.Get("Top Coat Enable");
+			var topCoatWeight = dtuMaterial.Get("Top Coat Weight");
+			var topCoatColor = dtuMaterial.Get("Top Coat Color");
+			var topCoatReflectivity = dtuMaterial.Get("Top Coat Reflectivity");
+			var topCoatRoughness = dtuMaterial.Get("Top Coat Roughness");
+			var topCoatBumpWeight = dtuMaterial.Get("Top Coat Bump Weight");
+			var metallicFlakesEnable = dtuMaterial.Get("Metallic Flakes Enable");
+			var metallicFlakesWeight = dtuMaterial.Get("Metallic Flakes Weight");
+			var metallicFlakesColor = dtuMaterial.Get("Metallic Flakes Color");
+			var metallicFlakesRoughness = dtuMaterial.Get("Metallic Flakes Roughness");
+			var metallicFlakesSize = dtuMaterial.Get("Metallic Flakes Size");
+			var metallicFlakesDensity = dtuMaterial.Get("Metallic Flakes Density");
+			var metallicFlakesBumpWeight = dtuMaterial.Get("Metallic Flakes Bump Weight");
+			var displacementStrength = dtuMaterial.Get("Displacement Strength");
+			var minimumDisplacement = dtuMaterial.Get("Minimum Displacement");
+			var maximumDisplacement = dtuMaterial.Get("Maximum Displacement");
+			var subDDisplacementLevel = dtuMaterial.Get("SubD Displacement Level");
+			var roundCornersRadius = dtuMaterial.Get("Round Corners Radius");
+			var roundCornersAcrossMaterials = dtuMaterial.Get("Round Corners Across Materials");
+			var roundCornersRoundness = dtuMaterial.Get("Round Corners Roundness");
+
+			var horizontalTiles2 = dtuMaterial.Get("Horizontal Tiles2");
+			var HorizontalOffset2 = dtuMaterial.Get("Horizontal Offset2");
+			var verticalTiles2 = dtuMaterial.Get("Vertical Tiles2");
+			var verticalOffset2 = dtuMaterial.Get("Vertical Offset2");
+			var transmissionEnable = dtuMaterial.Get("Transmission Enable");
+			var transmittedColor = dtuMaterial.Get("Transmitted Color");
+			var transmittedMeasurementDistance = dtuMaterial.Get("Transmitted Measurement Distance");
+			var subSurfaceEnable = dtuMaterial.Get("Sub Surface Enable");
+			var sssColor = dtuMaterial.Get("SSS Color");
+			var scatteringMeasurementDistance = dtuMaterial.Get("Scattering Measurement Distance");
+			var sssDirection = dtuMaterial.Get("SSS Direction");
+
+
+
+
+
+
+			var matNameLower = dtuMaterial.MaterialName.ToLower();
+			var assetNameLower = dtuMaterial.AssetName.ToLower();
+			var valueLower = dtuMaterial.Value.ToLower();
+			
+			string shaderName = DTU_Constants.shaderNameIraySkin;
+			var shader = Shader.Find(shaderName);
+			if(shader == null)
+			{
+				UnityEngine.Debug.LogError("Failed to locate shader: " + shaderName + " for mat: " + dtuMaterial.MaterialName);
+				return null;
+			}
+			var mat = new Material(shader);
+			var record = new Daz3DDTUImporter.ImportEventRecord();
+
+
+			bool isDoubleSided = false;
+			bool isTransparent = false;
+
+			bool hasDualLobeSpecularWeight = false;
+			bool hasDualLobeSpecularReflectivity = false;
+			bool hasGlossyLayeredWeight = false;
+			bool hasGlossyColor = false;
+			int sortingPriority = 0;
+
+
+			if(diffuseEnable.Boolean)
+			{
+				mat.SetColor("_Diffuse",diffuseColor.Color);
+				mat.SetTexture("_DiffuseMap",ImportTextureFromPath(diffuseColor.Texture,materialDir, record));
+			}
+			if(metallicityEnable.Boolean)
+			{
+				mat.SetFloat("_Metallic",metallicWeight.Float);
+				mat.SetTexture("_MetallicMap",ImportTextureFromPath(metallicWeight.Texture,materialDir, record));
+			}
+			if(translucencyEnable.Boolean)
+			{
+				mat.SetColor("_TranslucencyColor",translucencyColor.Color);
+				mat.SetTexture("_TranslucencyColorMap",ImportTextureFromPath(translucencyColor.Texture,materialDir, record));
+			}
+			mat.SetFloat("_TranslucencyWeight",translucencyWeight.Float);
+
+			mat.SetFloat("_DualLobeSpecularWeight",specularLobe1Roughness.Float);
+			//mat.SetTexture("_DualLobeSpecularWeightMap",ImportTextureFromPath(dualLobeSpecularWeight.Texture,materialDir));
+			mat.SetFloat("_DualLobeSpecularReflectivity",dualLobeSpecularReflectivity.Float);
+			mat.SetTexture("_DualLobeSpecularReflectivityMap",ImportTextureFromPath(dualLobeSpecularReflectivity.Texture,materialDir,record,false,true));
+			
+			mat.SetTexture("_SpecularLobe1RoughnessMap",ImportTextureFromPath(specularLobe1Roughness.Texture,materialDir,record,false,true));
+			mat.SetFloat("_DualLobeSpecularRatio",dualLobeSpecularRatio.Float);
+
+
+			mat.SetFloat("_Roughness",diffuseRoughness.Float);
+			mat.SetTexture("_RoughnessMap",ImportTextureFromPath(diffuseRoughness.Texture,materialDir, record));
+
+			mat.SetTexture("_NormalMap",ImportTextureFromPath(normalMap.Texture,materialDir,record,false,true));
+
+			//hardcoded or the skin will appear pure black
+			mat.SetFloat("_SpecularStrength",0.0f);
+
+			//if(bumpEnable.Boolean)
+			//{
+			//	mat.SetFloat("_Bump",bumpStrength.Float);
+			//}
+
+
+			ToggleCommonMaterialProperties(ref mat,matNameLower,isTransparent,isDoubleSided, hasDualLobeSpecularWeight, hasDualLobeSpecularReflectivity,sortingPriority,hasGlossyLayeredWeight,hasGlossyColor);
+
+			if (record.Tokens.Count > 0)
+			{
+				Daz3DDTUImporter.EventQueue.Enqueue(record);
+			}
+
+			return mat;
+		}
+
 		
 
 		/// <summary>
@@ -1866,6 +2048,10 @@ namespace Daz3D
 			{
 				materialType = DTUMaterialType.BlendedDualLobeHair;
 			}
+			else if(dtuMaterial.MaterialType == "PBRSkin")
+			{
+				materialType = DTUMaterialType.PBRSkin;
+			}
 			else
 			{
 				//If we don't know what it is, we'll just try, but it's quite possible it won't work
@@ -1921,6 +2107,14 @@ namespace Daz3D
 			} else if(materialType == DTUMaterialType.BlendedDualLobeHair)
 			{
 				var localMat = ConvertToUnityBlendedDualLobeHair(dtuMaterial,materialDir);
+				if(localMat != null)
+				{
+					SaveMaterialAsAsset(localMat,materialPath);
+					return localMat;
+				}
+			} else if(materialType == DTUMaterialType.PBRSkin)
+			{
+				var localMat = ConvertToUnityPBRSkin(dtuMaterial,materialDir);
 				if(localMat != null)
 				{
 					SaveMaterialAsAsset(localMat,materialPath);
