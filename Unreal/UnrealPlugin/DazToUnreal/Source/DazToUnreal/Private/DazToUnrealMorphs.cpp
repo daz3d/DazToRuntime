@@ -272,7 +272,7 @@ void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, ED
 					}
 
 					// Get the Linear Blend Skinning for the vertex
-					FVector PointPosition = ImportData.Points[ModifiedPointVertexIndex];
+					FVector PointPosition;// TODO: 5.0 quick compile fix. = ImportData.Points[ModifiedPointVertexIndex];
 					FVector LinearBlendPostion = FVector(0.0f, 0.0f, 0.0f);
 					float WeightSum = 0.0f;
 					FTransform LinearBlendTransform = FTransform::Identity;
