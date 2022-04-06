@@ -403,7 +403,7 @@ void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, ED
 
 					UE_LOG(LogTemp, Warning, TEXT("Diff: %f, %f, %f"), Diff.X, Diff.Y, Diff.Z);
 
-					ImportMorphData.Points[ModifiedPointIndex] = LinearBlendTransform.GetTranslation();// +PointPosition;//ImportMorphData.Points[ModifiedPointIndex] + Diff;
+					// TODO: Temp 5.0 fix ImportMorphData.Points[ModifiedPointIndex] = LinearBlendTransform.GetTranslation();// +PointPosition;//ImportMorphData.Points[ModifiedPointIndex] + Diff;
 					ModifiedPointIndex++;
 				}
 				//	//auto VertexSet = ImportData.MorphTargetModifiedPoints[ImportMorphIndex];
