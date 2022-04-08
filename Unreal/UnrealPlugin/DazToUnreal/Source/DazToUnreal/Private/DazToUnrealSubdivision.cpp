@@ -5,12 +5,12 @@
 #define M_PI PI		// OpenSubdiv is expecting M_PI to be defined already
 #endif
 
-#if ENGINE_MAJOR_VERSION == 4
-#include "far/topologyDescriptor.h"
-#include "far/primvarRefiner.h"
-#else
+#if ENGINE_MAJOR_VERSION > 4
 #include "opensubdiv/far/topologyDescriptor.h"
 #include "opensubdiv/far/primvarRefiner.h"
+#else
+#include "far/topologyDescriptor.h"
+#include "far/primvarRefiner.h"
 #endif
 
 struct FDtuOsdSkinWeight

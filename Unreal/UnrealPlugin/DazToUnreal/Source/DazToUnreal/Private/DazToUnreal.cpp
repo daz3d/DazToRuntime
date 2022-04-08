@@ -255,7 +255,11 @@ void FDazToUnrealModule::StartupUDPListener()
 		  .BoundToEndpoint(Endpoint);
 
 	 TickDelegate = FTickerDelegate::CreateRaw(this, &FDazToUnrealModule::Tick);
+#if ENGINE_MAJOR_VERSION > 4
+	 TickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate, 1.0f);
+#else
 	 TickDelegateHandle = FTicker::GetCoreTicker().AddTicker(TickDelegate, 1.0f);
+#endif
 }
 void FDazToUnrealModule::ShutdownUDPListener()
 {
@@ -1124,10 +1128,19 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 {
 		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
 		 {
-			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, SkeletalMesh->Skeleton, SkeletalMesh))
+#if ENGINE_MAJOR_VERSION > 4
+			 USkeleton* Skeleton = SkeletalMesh->GetSkeleton();
+#else
+			 USkeleton* Skeleton = SkeletalMesh->Skeleton;
+#endif
+			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, Skeleton, SkeletalMesh))
 			 {
 				 //JointControlAnim->CurrentSkeleton = SkeletalMesh->Skeleton;
+#if ENGINE_MAJOR_VERSION > 4
+				 SkeletalMesh->SetPostProcessAnimBlueprint(JointControlAnim->GetClass());
+#else
 				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();
+#endif			 
 			 }
 		 }
 		 
@@ -1341,13 +1354,22 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  {
 				if (CachedSettings->SkeletonPostProcessAnimation.Contains(SkeletonPath))
 				{
+#if ENGINE_MAJOR_VERSION > 4
+					SkeletalMesh->SetPostProcessAnimBlueprint(CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>());
+#else
 					SkeletalMesh->PostProcessAnimBlueprint = CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>();
+#endif
 				}
 
 				//Get the new skeleton
 				if (!Skeleton)
 				{
+#if ENGINE_MAJOR_VERSION > 4
+					Skeleton = SkeletalMesh->GetSkeleton();
+#else
 					 Skeleton = SkeletalMesh->Skeleton;
+#endif
+
 					 int32 BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("pelvis")));
 					 if (BoneIndex == -1)
 					 {

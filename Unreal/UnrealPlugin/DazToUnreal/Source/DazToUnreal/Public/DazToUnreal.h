@@ -79,7 +79,11 @@ private:
 	FTickerDelegate TickDelegate;
 
 	/** DelegateHandle for the tick function*/
+#if ENGINE_MAJOR_VERSION > 4
+	FTSTicker::FDelegateHandle TickDelegateHandle;
+#else
 	FDelegateHandle TickDelegateHandle;
+#endif
 
 	/** Tick function for handling incomming messages from Daz3D*/
 	bool Tick(float DeltaTime);

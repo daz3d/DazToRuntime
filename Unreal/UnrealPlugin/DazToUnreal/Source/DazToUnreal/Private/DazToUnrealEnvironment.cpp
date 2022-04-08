@@ -4,6 +4,9 @@
 #include "Dom/JsonObject.h"
 #include "EditorLevelLibrary.h"
 #include "Math/UnrealMathUtility.h"
+#if ENGINE_MAJOR_VERSION > 4
+#include "Subsystems/EditorActorSubsystem.h"
+#endif
 
 void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObject)
 {
@@ -60,7 +63,12 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 			FVector Location = FVector(InstanceXPos, InstanceYPos, InstanceZPos);
 			FRotator Rotation = Quat.Rotator();
 
+#if ENGINE_MAJOR_VERSION > 4
+			UEditorActorSubsystem* EditorActorSubsystem = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+			AActor* NewActor = EditorActorSubsystem->SpawnActorFromObject(InstanceObject, Location, Rotation);
+#else
 			AActor* NewActor = UEditorLevelLibrary::SpawnActorFromObject(InstanceObject, Location, Rotation);
+#endif
 			if (NewActor)
 			{
 				NewActor->SetActorScale3D(FVector(ScaleXPos, ScaleYPos, ScaleZPos));
@@ -74,7 +82,12 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 			FVector Location = FVector(InstanceXPos, InstanceYPos, InstanceZPos);
 			FRotator Rotation = Quat.Rotator();
 
+#if ENGINE_MAJOR_VERSION > 4
+			UEditorActorSubsystem* EditorActorSubsystem = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
+			AActor* NewActor = EditorActorSubsystem->SpawnActorFromClass(AActor::StaticClass(), Location, Rotation);
+#else
 			AActor* NewActor = UEditorLevelLibrary::SpawnActorFromClass(AActor::StaticClass(), Location, Rotation);
+#endif
 			if (NewActor)
 			{
 				NewActor->SetActorScale3D(FVector(ScaleXPos, ScaleYPos, ScaleZPos));

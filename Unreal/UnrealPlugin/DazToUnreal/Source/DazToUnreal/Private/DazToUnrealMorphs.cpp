@@ -189,9 +189,14 @@ UAnimBlueprint* FDazToUnrealMorphs::CreateBlueprint(UObject* InParent, FName Nam
 
 void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, EDazMorphAnimInstanceDriver Axis, float MinBend, float MaxBend, USkeletalMesh* Mesh)
 {
+#if 0
 	if (UMorphTarget* Morph = Mesh->FindMorphTarget(MorphName))
 	{
+#if ENGINE_MAJOR_VERSION > 4
+		const FReferenceSkeleton& RefSkeleton = Mesh->GetRefSkeleton();
+#else
 		const FReferenceSkeleton& RefSkeleton = Mesh->RefSkeleton;
+#endif
 
 		TArray<FTransform> ComponentSpaceTransforms;
 		FAnimationRuntime::FillUpComponentSpaceTransforms(RefSkeleton, RefSkeleton.GetRefBonePose(), ComponentSpaceTransforms);
@@ -272,7 +277,7 @@ void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, ED
 					}
 
 					// Get the Linear Blend Skinning for the vertex
-					FVector PointPosition;// TODO: 5.0 quick compile fix. = ImportData.Points[ModifiedPointVertexIndex];
+					FVector PointPosition = ImportData.Points[ModifiedPointVertexIndex];
 					FVector LinearBlendPostion = FVector(0.0f, 0.0f, 0.0f);
 					float WeightSum = 0.0f;
 					FTransform LinearBlendTransform = FTransform::Identity;
@@ -403,7 +408,7 @@ void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, ED
 
 					UE_LOG(LogTemp, Warning, TEXT("Diff: %f, %f, %f"), Diff.X, Diff.Y, Diff.Z);
 
-					// TODO: Temp 5.0 fix ImportMorphData.Points[ModifiedPointIndex] = LinearBlendTransform.GetTranslation();// +PointPosition;//ImportMorphData.Points[ModifiedPointIndex] + Diff;
+					ImportMorphData.Points[ModifiedPointIndex] = LinearBlendTransform.GetTranslation();// +PointPosition;//ImportMorphData.Points[ModifiedPointIndex] + Diff;
 					ModifiedPointIndex++;
 				}
 				//	//auto VertexSet = ImportData.MorphTargetModifiedPoints[ImportMorphIndex];
@@ -464,4 +469,5 @@ void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, ED
 		}
 		Mesh->SaveLODImportedData(0, ImportData);
 	}
+#endif
 }

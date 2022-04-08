@@ -433,11 +433,11 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			{
 				if (MaterialProperty.Type == TEXT("Texture"))
 				{
-					FStringAssetReference TextureAssetPath(CharacterTexturesFolder / MaterialProperty.Value);
+					FSoftObjectPath TextureAssetPath(CharacterTexturesFolder / MaterialProperty.Value);
 					UObject* TextureAsset = TextureAssetPath.TryLoad();
 					if (TextureAsset == nullptr)
 					{
-						FStringAssetReference TextureAssetPathFull(MaterialProperty.Value);
+						FSoftObjectPath TextureAssetPathFull(MaterialProperty.Value);
 						TextureAsset = TextureAssetPathFull.TryLoad();
 					}
 					FMaterialParameterInfo ParameterInfo(*MaterialProperty.Name);
