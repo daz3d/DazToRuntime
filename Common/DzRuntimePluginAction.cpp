@@ -302,6 +302,10 @@ void DzRuntimePluginAction::ExportNode(DzNode* Node)
 		  ExportOptions.setBoolValue("doLights", false);
 		  ExportOptions.setBoolValue("doCameras", false);
 		  ExportOptions.setBoolValue("doAnims", false);
+		  if (AssetType == "Animation")
+		  {
+			  ExportOptions.setBoolValue("doAnims", true);
+		  }
 		  if ((AssetType == "Animation" || AssetType == "SkeletalMesh") && ExportMorphs && MorphString != "")
 		  {
 				ExportOptions.setBoolValue("doMorphs", true);
