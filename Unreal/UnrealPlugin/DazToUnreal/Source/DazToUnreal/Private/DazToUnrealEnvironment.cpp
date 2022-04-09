@@ -57,6 +57,13 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 			InstanceObject = LoadObject<UObject>(NULL, *AssetPath, NULL, LOAD_None, NULL);
 		}
 
+		// If this was imported with Force Front X Axis, fix the rotation
+		if (InstanceObject && FDazToUnrealUtils::IsModelFacingX(InstanceObject))
+		{
+			FQuat FacingUndo(FRotator(0.0f, 90.0f, 0.0f));
+			Quat = FacingUndo * PitchQuat * YawQuat * RollQuat;
+		}
+
 		// Spawn the object into the scene
 		if (InstanceObject)
 		{

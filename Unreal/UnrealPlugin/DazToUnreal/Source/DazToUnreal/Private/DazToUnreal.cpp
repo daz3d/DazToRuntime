@@ -1297,6 +1297,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 {
 		  FbxFactory->ImportUI->bImportAsSkeletal = false;
 		  FbxFactory->ImportUI->bImportMaterials = true;
+		  FbxFactory->ImportUI->StaticMeshImportData->bForceFrontXAxis = false;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_StaticMesh;
 	 }
 	 if (AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose)
