@@ -881,10 +881,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 								}
 						  }
 					 }
-					 for (FbxBlendShapeChannel* Channel : ChannelsToRemove)
-					 {
-						  BlendShape->RemoveBlendShapeChannel(Channel);
-					 }
 				}
 		  }
 	 }
