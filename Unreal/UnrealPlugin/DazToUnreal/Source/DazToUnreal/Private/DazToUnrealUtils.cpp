@@ -56,11 +56,7 @@ bool FDazToUnrealUtils::IsModelFacingX(UObject* MeshObject)
 	}
 	if (UStaticMesh* StaticMesh = Cast<UStaticMesh>(MeshObject))
 	{
-#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION < 27
 		if (UAssetImportData* AssetImportData = StaticMesh->AssetImportData)
-#else
-		if (UAssetImportData* AssetImportData = StaticMesh->GetAssetImportData())
-#endif
 		{
 			UFbxAssetImportData* FbxAssetImportData = Cast<UFbxAssetImportData>(AssetImportData);
 			if (FbxAssetImportData != nullptr && FbxAssetImportData->bForceFrontXAxis)
