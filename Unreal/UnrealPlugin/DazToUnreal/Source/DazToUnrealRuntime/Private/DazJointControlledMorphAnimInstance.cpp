@@ -21,7 +21,7 @@ FAnimInstanceProxy* UDazJointControlledMorphAnimInstance::CreateAnimInstanceProx
 
 void FDazJointControlledMorphAnimInstanceProxy::Initialize(UAnimInstance* InAnimInstance)
 {
-	FAnimInstanceProxy::Initialize(InAnimInstance);
+	Super::Initialize(InAnimInstance);
 	if (UDazJointControlledMorphAnimInstance* Instance = Cast<UDazJointControlledMorphAnimInstance>(GetAnimInstanceObject()))
 	{
 		ControlLinks = Instance->ControlLinks;
@@ -32,7 +32,6 @@ void FDazJointControlledMorphAnimInstanceProxy::PreUpdate(UAnimInstance* InAnimI
 {
 	Super::PreUpdate(InAnimInstance, DeltaSeconds);
 
-	FAnimInstanceProxy::Initialize(InAnimInstance);
 	if (UDazJointControlledMorphAnimInstance* Instance = Cast<UDazJointControlledMorphAnimInstance>(GetAnimInstanceObject()))
 	{
 		if (ControlLinks.Num() != Instance->ControlLinks.Num())
