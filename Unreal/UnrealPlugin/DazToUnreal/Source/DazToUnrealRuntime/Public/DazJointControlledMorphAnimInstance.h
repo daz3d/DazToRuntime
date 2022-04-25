@@ -32,10 +32,10 @@ struct DAZTOUNREALRUNTIME_API FDazJointControlLinkKey
 	GENERATED_USTRUCT_BODY()
 
 		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-		float BoneRotation;
+		float BoneRotation = 0.0f;;
 
 		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-		float MorphAlpha;
+		float MorphAlpha = 0.0f;
 };
 
 USTRUCT(Blueprintable)
@@ -47,7 +47,7 @@ struct DAZTOUNREALRUNTIME_API FDazJointControlLink
 		FName BoneName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-		EDazMorphAnimInstanceDriver PrimaryAxis;
+		EDazMorphAnimInstanceDriver PrimaryAxis = EDazMorphAnimInstanceDriver::RotationY;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 		EDazMorphAnimInstanceDriver SecondaryAxis = EDazMorphAnimInstanceDriver::None;
@@ -56,10 +56,10 @@ struct DAZTOUNREALRUNTIME_API FDazJointControlLink
 		FName MorphName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-		float Scalar;
+		float Scalar = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-		float Alpha;
+		float Alpha = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 		TArray<FDazJointControlLinkKey> Keys;
