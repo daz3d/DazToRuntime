@@ -187,6 +187,16 @@ UAnimBlueprint* FDazToUnrealMorphs::CreateBlueprint(UObject* InParent, FName Nam
 	
 }
 
+bool FDazToUnrealMorphs::IsAutoJCMImport(TSharedPtr<FJsonObject> JsonObject)
+{
+	const TArray<TSharedPtr<FJsonValue>>* JointLinkList;
+	if (JsonObject->TryGetArrayField(TEXT("JointLinks"), JointLinkList))
+	{
+		return true;
+	}
+	return false;
+}
+
 void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, EDazMorphAnimInstanceDriver Axis, float MinBend, float MaxBend, USkeletalMesh* Mesh)
 {
 #if 0
