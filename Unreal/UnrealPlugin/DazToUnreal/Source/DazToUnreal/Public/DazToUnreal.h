@@ -79,7 +79,11 @@ private:
 	FTickerDelegate TickDelegate;
 
 	/** DelegateHandle for the tick function*/
+#if ENGINE_MAJOR_VERSION > 4
+	FTSTicker::FDelegateHandle TickDelegateHandle;
+#else
 	FDelegateHandle TickDelegateHandle;
+#endif
 
 	/** Tick function for handling incomming messages from Daz3D*/
 	bool Tick(float DeltaTime);
@@ -95,7 +99,7 @@ private:
 	bool ImportTextureAssets(TArray<FString>& SourcePaths, FString& ImportLocation);
 
 	/** Imports the modified FBX file*/
-	UObject* ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName);
+	UObject* ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName, const bool bSetPostProcessAnimation);
 
 	/** Function for creating the Material Instances for the model*/
 	//bool CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType);

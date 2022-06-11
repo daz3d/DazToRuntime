@@ -24,6 +24,8 @@ public class DazToUnreal : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"AnimGraph",
+				"BlueprintGraph",
 				"Projects",
 				"InputCore",
 				"UnrealEd",
@@ -33,6 +35,8 @@ public class DazToUnreal : ModuleRules
 				"Slate",
 				"SlateCore",
 				"EditorScriptingUtilities",
+				"SkeletalMeshUtilitiesCommon",
+				"DazToUnrealRuntime",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
@@ -48,8 +52,7 @@ public class DazToUnreal : ModuleRules
 			}
 			);
 
-        AddEngineThirdPartyPrivateStaticDependencies(Target,
-            "FBX"
-        );
-    }
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "FBX");
+		AddEngineThirdPartyPrivateStaticDependencies(Target, new string[] { "MikkTSpace", "OpenSubdiv" });
+	}
 }

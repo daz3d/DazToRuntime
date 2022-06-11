@@ -374,8 +374,11 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 
 	// Create the Material Instance
 	auto MaterialInstanceFactory = NewObject<UMaterialInstanceConstantFactoryNew>();
-
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION < 26
 	UPackage* Package = CreatePackage(nullptr, *(CharacterMaterialFolder / MaterialName));
+#else
+	UPackage* Package = CreatePackage(*(CharacterMaterialFolder / MaterialName));
+#endif
 	UMaterialInstanceConstant* UnrealMaterialConstant = (UMaterialInstanceConstant*)MaterialInstanceFactory->FactoryCreateNew(UMaterialInstanceConstant::StaticClass(), Package, *MaterialName, RF_Standalone | RF_Public, NULL, GWarn);
 
 
@@ -430,11 +433,11 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			{
 				if (MaterialProperty.Type == TEXT("Texture"))
 				{
-					FStringAssetReference TextureAssetPath(CharacterTexturesFolder / MaterialProperty.Value);
+					FSoftObjectPath TextureAssetPath(CharacterTexturesFolder / MaterialProperty.Value);
 					UObject* TextureAsset = TextureAssetPath.TryLoad();
 					if (TextureAsset == nullptr)
 					{
-						FStringAssetReference TextureAssetPathFull(MaterialProperty.Value);
+						FSoftObjectPath TextureAssetPathFull(MaterialProperty.Value);
 						TextureAsset = TextureAssetPathFull.TryLoad();
 					}
 					FMaterialParameterInfo ParameterInfo(*MaterialProperty.Name);
@@ -692,10 +695,26 @@ USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(co
 	}
 
 	FString SubsurfaceProfileName = MaterialName + TEXT("_Profile");
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION < 26
 	UPackage* Package = CreatePackage(nullptr, *(CharacterMaterialFolder / MaterialName));
-	//USubsurfaceProfile* SubsurfaceProfile = (USubsurfaceProfile*)SubsurfaceProfileFactory->FactoryCreateNew(USubsurfaceProfile::StaticClass(), Package, *MaterialName, RF_Standalone | RF_Public, NULL, GWarn);
-	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
-	USubsurfaceProfile* SubsurfaceProfile = Cast<USubsurfaceProfile>(AssetToolsModule.Get().CreateAsset(SubsurfaceProfileName, FPackageName::GetLongPackagePath(*(CharacterMaterialFolder / MaterialName)), USubsurfaceProfile::StaticClass(), NULL));
+#else
+	UPackage* Package = CreatePackage(*(CharacterMaterialFolder / MaterialName));
+#endif
+
+	USubsurfaceProfile* SubsurfaceProfile = nullptr;
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	FAssetData AssetData = AssetRegistryModule.Get().GetAssetByObjectPath(*(CharacterMaterialFolder / SubsurfaceProfileName + TEXT(".") + SubsurfaceProfileName));
+	UObject* Asset = FindObject<UObject>(nullptr, *(CharacterMaterialFolder / SubsurfaceProfileName + TEXT(".") + SubsurfaceProfileName));
+	if (AssetData.IsValid())
+	{
+		SubsurfaceProfile = Cast<USubsurfaceProfile>(AssetData.GetAsset());
+	}
+
+	if (SubsurfaceProfile == nullptr)
+	{
+		FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
+		SubsurfaceProfile = Cast<USubsurfaceProfile>(AssetToolsModule.Get().CreateAsset(SubsurfaceProfileName, FPackageName::GetLongPackagePath(*(CharacterMaterialFolder / MaterialName)), USubsurfaceProfile::StaticClass(), NULL));
+	}
 	if (HasMaterialProperty(TEXT("Specular Lobe 1 Roughness"), MaterialProperties))
 	{
 		SubsurfaceProfile->Settings.Roughness0 = FCString::Atof(*GetMaterialProperty(TEXT("Specular Lobe 1 Roughness"), MaterialProperties));

@@ -18,12 +18,15 @@
 #include <dzfigure.h>
 #include <dzfacetmesh.h>
 #include <dzbone.h>
+#include <dzgroupnode.h>
+#include <dzinstancenode.h>
 //#include <dznodeinstance.h>
 #include "idzsceneasset.h"
 #include "dzuri.h"
 
 #include "DzUnrealDialog.h"
 #include "DzUnrealAction.h"
+#include "DzUnrealMorphSelectionDialog.h"
 
 DzUnrealAction::DzUnrealAction() :
 	 DzRuntimePluginAction(tr("&Daz to Unreal"), tr("Send the selected node to Unreal."))
@@ -69,24 +72,36 @@ void DzUnrealAction::executeAction()
 	 // If the Accept button was pressed, start the export
 	 if (dlg->exec() == QDialog::Accepted)
 	 {
-		  // Collect the values from the dialog fields
-		  CharacterName = dlg->assetNameEdit->text();
-		  ImportFolder = dlg->intermediateFolderEdit->text();
-		  CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
-		  CharacterFBX = CharacterFolder + CharacterName + ".fbx";
-		  AssetType = dlg->assetTypeCombo->currentText().replace(" ", "");
-		  MorphString = dlg->GetMorphString();
-		  Port = dlg->portEdit->text().toInt();
-		  ExportMorphs = dlg->morphsEnabledCheckBox->isChecked();
-		  ExportSubdivisions = dlg->subdivisionEnabledCheckBox->isChecked();
-		  MorphMapping = dlg->GetMorphMapping();
-		  ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
-		  ExportMaterialPropertiesCSV = dlg->exportMaterialPropertyCSVCheckBox->isChecked();
-		  SubdivisionDialog = DzUnrealSubdivisionDialog::Get(dlg);
-		  SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
-		  FBXVersion = dlg->fbxVersionCombo->currentText();
+		 // Collect the values from the dialog fields
+		 CharacterName = dlg->assetNameEdit->text();
+		 ImportFolder = dlg->intermediateFolderEdit->text();
+		 CharacterFolder = ImportFolder + "\\" + CharacterName + "\\";
+		 CharacterFBX = CharacterFolder + CharacterName + ".fbx";
+		 CharacterBaseFBX = CharacterFolder + CharacterName + "_base.fbx";
+		 CharacterHDFBX = CharacterFolder + CharacterName + "_HD.fbx";
+		 AssetType = dlg->assetTypeCombo->currentText().replace(" ", "");
+		 MorphString = dlg->GetMorphString();
+		 Port = dlg->portEdit->text().toInt();
+		 ExportMorphs = dlg->morphsEnabledCheckBox->isChecked();
+		 ExportSubdivisions = dlg->subdivisionEnabledCheckBox->isChecked();
+		 MorphMapping = dlg->GetMorphMapping();
+		 ShowFbxDialog = dlg->showFbxDialogCheckBox->isChecked();
+		 ExportMaterialPropertiesCSV = dlg->exportMaterialPropertyCSVCheckBox->isChecked();
+		 SubdivisionDialog = DzUnrealSubdivisionDialog::Get(dlg);
+		 FBXVersion = dlg->fbxVersionCombo->currentText();
 
-		  Export();
+		 if (AssetType == "SkeletalMesh" && ExportSubdivisions)
+		 {
+			 // export base mesh
+			 ExportBaseMesh = true;
+			 SubdivisionDialog->LockSubdivisionProperties(false);
+			 Export();
+		 }
+
+		 ExportBaseMesh = false;
+		 SubdivisionDialog->LockSubdivisionProperties(ExportSubdivisions);
+		 Export();
+
 	 }
 }
 
@@ -100,6 +115,8 @@ void DzUnrealAction::WriteConfiguration()
 	 writer.addMember("Asset Name", CharacterName);
 	 writer.addMember("Asset Type", AssetType);
 	 writer.addMember("FBX File", CharacterFBX);
+	 writer.addMember("Base FBX File", CharacterBaseFBX);
+	 writer.addMember("HD FBX File", CharacterHDFBX);
 	 writer.addMember("Import Folder", CharacterFolder);
 
 	 if (AssetType != "Environment")
@@ -138,10 +155,42 @@ void DzUnrealAction::WriteConfiguration()
 					writer.finishObject();
 			  }
 		 }
-
 		 writer.finishArray();
 
-
+		 if (ExportMorphs)
+		 {
+			 DzMainWindow* mw = dzApp->getInterface();
+			 DzUnrealMorphSelectionDialog* morphDialog = DzUnrealMorphSelectionDialog::Get(mw);
+			 if (morphDialog->IsAutoJCMEnabled())
+			 {
+				 writer.startMemberArray("JointLinks", true);
+				 QList<JointLinkInfo> JointLinks = morphDialog->GetActiveJointControlledMorphs(Selection);
+				 foreach(JointLinkInfo linkInfo, JointLinks)
+				 {
+					 writer.startObject(true);
+					 writer.addMember("Bone", linkInfo.Bone);
+					 writer.addMember("Axis", linkInfo.Axis);
+					 writer.addMember("Morph", linkInfo.Morph);
+					 writer.addMember("Scalar", linkInfo.Scalar);
+					 writer.addMember("Alpha", linkInfo.Alpha);
+					 if (linkInfo.Keys.count() > 0)
+					 {
+						 writer.startMemberArray("Keys", true);
+						 foreach(JointLinkKey key, linkInfo.Keys)
+						 {
+							 writer.startObject(true);
+							 writer.addMember("Angle", key.Angle);
+							 writer.addMember("Value", key.Value);
+							 writer.finishObject();
+						 }
+						 writer.finishArray();
+					 }
+					 writer.finishObject();
+				 }
+				 writer.finishArray();
+			 }
+		 }
+		 
 		 writer.startMemberArray("Subdivisions", true);
 		 if (ExportSubdivisions)
 			 SubdivisionDialog->WriteSubdivisions(writer);
@@ -177,6 +226,14 @@ void DzUnrealAction::WriteConfiguration()
 	 writer.finishObject();
 
 	 DTUfile.close();
+
+	 if (AssetType != "Environment" && ExportSubdivisions)
+	 {
+		 QString CMD = "ImportFBXScene " + DTUfilename;
+		 QByteArray array = CMD.toLocal8Bit();
+		 char* cmd = array.data();
+		 int res = system(cmd);
+	 }
 
 	 // Send a message to Unreal telling it to start an import
 	 QUdpSocket* sendSocket = new QUdpSocket(this);
@@ -330,10 +387,22 @@ void DzUnrealAction::WriteInstances(DzNode* Node, DzJsonWriter& Writer, QMap<QSt
 	DzShape* Shape = Object ? Object->getCurrentShape() : NULL;
 	DzGeometry* Geometry = Shape ? Shape->getGeometry() : NULL;
 	DzBone* Bone = qobject_cast<DzBone*>(Node);
+	DzGroupNode* GroupNode = qobject_cast<DzGroupNode*>(Node);
+	DzInstanceNode* InstanceNode = qobject_cast<DzInstanceNode*>(Node);
 
 	if (Bone == nullptr && Geometry)
 	{
 		ExportedGeometry.append(Geometry);
+		ParentID = WriteInstance(Node, Writer, ParentID);
+	}
+
+	if (GroupNode)
+	{
+		ParentID = WriteInstance(Node, Writer, ParentID);
+	}
+
+	if (InstanceNode)
+	{
 		ParentID = WriteInstance(Node, Writer, ParentID);
 	}
 
@@ -348,11 +417,25 @@ QUuid DzUnrealAction::WriteInstance(DzNode* Node, DzJsonWriter& Writer, QUuid Pa
 {
 	QString Path = Node->getAssetFileInfo().getUri().getFilePath();
 	QFile File(Path);
-	QString FileName = File.fileName();
-	QStringList Items = FileName.split("/");
-	QStringList Parts = Items[Items.count() - 1].split(".");
-	QString Name = Parts[0].remove(QRegExp("[^A-Za-z0-9_]"));
+	QString AssetID = Node->getAssetUri().getId();
+	QString Name = AssetID.remove(QRegExp("[^A-Za-z0-9_]"));
 	QUuid Uid = QUuid::createUuid();
+
+	// Group Node needs an empty InstanceAsset
+	DzGroupNode* GroupNode = qobject_cast<DzGroupNode*>(Node);
+	if (GroupNode)
+	{
+		Name = "";
+	}
+
+	// Group Node needs an empty InstanceAsset
+	DzInstanceNode* InstanceNode = qobject_cast<DzInstanceNode*>(Node);
+	if (InstanceNode)
+	{
+		AssetID = InstanceNode->getTarget()->getAssetUri().getId();
+		Name = AssetID.remove(QRegExp("[^A-Za-z0-9_]"));
+	}
+
 
 	Writer.startObject(true);
 	Writer.addMember("Version", 1);

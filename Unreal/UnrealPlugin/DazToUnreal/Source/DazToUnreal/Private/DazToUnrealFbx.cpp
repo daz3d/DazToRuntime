@@ -70,6 +70,13 @@ void FDazToUnrealFbx::FixClusterTranformLinks(FbxScene* Scene, FbxNode* RootNode
 		FixClusterTranformLinks(Scene, ChildNode);
 	}
 }
+void FDazToUnrealFbx::RemoveBindPoses(FbxScene* Scene)
+{
+	for (int32 PoseIndex = Scene->GetPoseCount() - 1; PoseIndex >= 0; --PoseIndex)
+	{
+		Scene->RemovePose(PoseIndex);
+	}
+}
 
 void FDazToUnrealFbx::AddWeightsToAllNodes(FbxNode* Parent)
 {

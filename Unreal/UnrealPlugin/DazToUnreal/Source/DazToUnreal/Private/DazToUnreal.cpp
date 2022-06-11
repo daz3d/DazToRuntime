@@ -7,6 +7,9 @@
 #include "DazToUnrealFbx.h"
 #include "DazToUnrealEnvironment.h"
 #include "DazToUnrealPoses.h"
+#include "DazToUnrealSubdivision.h"
+#include "DazToUnrealMorphs.h"
+#include "DazJointControlledMorphAnimInstance.h"
 
 #include "LevelEditor.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -252,7 +255,11 @@ void FDazToUnrealModule::StartupUDPListener()
 		  .BoundToEndpoint(Endpoint);
 
 	 TickDelegate = FTickerDelegate::CreateRaw(this, &FDazToUnrealModule::Tick);
+#if ENGINE_MAJOR_VERSION > 4
+	 TickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate, 1.0f);
+#else
 	 TickDelegateHandle = FTicker::GetCoreTicker().AddTicker(TickDelegate, 1.0f);
+#endif
 }
 void FDazToUnrealModule::ShutdownUDPListener()
 {
@@ -317,6 +324,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
 
 	 FString FBXPath = JsonObject->GetStringField(TEXT("FBX File"));
+	 FString BaseFBXPath = JsonObject->GetStringField(TEXT("Base FBX File"));
+	 FString HDFBXPath = JsonObject->GetStringField(TEXT("HD FBX File"));
 	 FString AssetName = FDazToUnrealUtils::SanitizeName(JsonObject->GetStringField(TEXT("Asset Name")));
 	 FString ImportFolder = JsonObject->GetStringField(TEXT("Import Folder"));
 	 DazAssetType AssetType = DazAssetType::StaticMesh;
@@ -340,6 +349,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 FString ImportCharacterTexturesFolder = FPaths::GetPath(FBXPath) / TEXT("Textures");
 	 FString ImportCharacterMaterialFolder = FPaths::GetPath(FBXPath) / TEXT("Materials");
 	 FString FBXFile = FBXPath;
+	 FString BaseFBXFile = BaseFBXPath;
+	 FString HDFBXFile = HDFBXPath;
 
 	 const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 
@@ -363,16 +374,22 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportDirectory)) return false;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterFolder)) return false;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterTexturesFolder)) return false;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return false;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return false;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return false;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return false;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZImportFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterTexturesFolder)) return false;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterMaterialFolder)) return false;
 
 	 if (AssetType == DazAssetType::Environment)
 	 {
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
 		 return nullptr;
+	 }
+
+	 // If there's an HD FBX File, that's the source
+	 if (FPaths::FileExists(HDFBXFile))
+	 {
+		 FBXFile = HDFBXFile;
 	 }
 
 	 // If there isn't an FBX file, stop
@@ -579,6 +596,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
 	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
 	 {
+		FDazToUnrealFbx::RemoveBindPoses(Scene);
 		FDazToUnrealFbx::FixClusterTranformLinks(Scene, RootBone);
 	 }
 
@@ -614,104 +632,21 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 FDazToUnrealFbx::RenameDuplicateBones(RootBone);
 
-	 struct local
+	 // If there are any subdivisions, load the base FBX
+	 FbxScene* BaseScene = nullptr;
+	 for (auto SubdivisionInfo : SubdivisionLevels)
 	 {
-		  static void GetWeights(FbxNode* SceneNode, TMap<int, TArray<int>>& VertexPolygons, TMap<int, double>& ClusterWeights, FbxMatrix TargetMatrix, int SearchFromVertex, TArray<int>& TouchedPolygons, TArray<int>& TouchedVertices, double& WeightsOut, double& DistancesOut, int32 Depth)
-		  {
-				FbxVector4 TargetPosition;
-				FbxQuaternion TargetNormal;
-				FbxVector4 TargetShearing;
-				FbxVector4 TargetScale;
-				double Sign;
-				TargetMatrix.GetElements(TargetPosition, TargetNormal, TargetShearing, TargetScale, Sign);
+		 if (SubdivisionInfo.Value > 0)
+		 {
+			 FbxImporter* BaseImporter = FbxImporter::Create(SdkManager, "");
+			 const bool bBaseImportStatus = BaseImporter->Initialize(TCHAR_TO_UTF8(*BaseFBXFile));
+			 BaseScene = FbxScene::Create(SdkManager, "");
+			 BaseImporter->Import(BaseScene);
+			 break;
+		 }
+	 }
 
-				FbxVector4* VertexLocations = SceneNode->GetMesh()->GetControlPoints();
-				for (int PolygonIndex : VertexPolygons[SearchFromVertex])
-				{
-					 if (TouchedPolygons.Contains(PolygonIndex)) continue;
-					 TouchedPolygons.Add(PolygonIndex);
-					 FbxVector4 NeedWeightVertexNormal;
-					 /*for (int VertexIndex = 0; VertexIndex < SceneNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
-					 {
-						 int Vertex = SceneNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
-						 if (Vertex == SearchFromVertex)
-						 {
-							 SceneNode->GetMesh()->GetPolygonVertexNormal(PolygonIndex, VertexIndex, NeedWeightVertexNormal);
-						 }
-					 }*/
-					 // Set the vertices with no weight, to be the average of the ones with weight.
-					 for (int VertexIndex = 0; VertexIndex < SceneNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
-					 {
-						  int Vertex = SceneNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
-						  if (TouchedVertices.Contains(Vertex)) continue;
-						  TouchedVertices.Add(Vertex);
-						  if (ClusterWeights.Contains(Vertex))
-						  {
-								FbxVector4 CompareVertexNormal;
-								SceneNode->GetMesh()->GetPolygonVertexNormal(PolygonIndex, VertexIndex, CompareVertexNormal);
-								//double DotProduct = CompareVertexNormal.DotProduct(NeedWeightVertexNormal);
-								FbxVector4 CompareLocation = VertexLocations[Vertex];
-								FbxVector4 CompareScale = FbxVector4(1.0f, 1.0f, 1.0f);
-								FbxMatrix CompareMatrix = FbxMatrix(CompareLocation, CompareVertexNormal, CompareScale);
-								//CompareLocation.
-								FbxMatrix AdjustedMatrix = CompareMatrix * TargetMatrix.Inverse();
 
-								FbxVector4 AdjustedComparePosition;
-								FbxQuaternion AdjustedCompareNormal;
-								FbxVector4 AdjustedCompareShearing;
-								FbxVector4 AdjustedCompareScale;
-								double AdjustedCompareSign;
-								AdjustedMatrix.GetElements(AdjustedComparePosition, AdjustedCompareNormal, AdjustedCompareShearing, AdjustedCompareScale, AdjustedCompareSign);
-
-								double InverseDotProduct = 1 - AdjustedCompareNormal.DotProduct(TargetNormal);
-								double AngleAdjustment = InverseDotProduct * 3.14;
-								//AdjustedComparePosition[2] = 0.0;
-								//FbxVector4 Test = TargetPosition.;
-								//double VertexDistance = AdjustedComparePosition.Length();//AdjustedComparePosition.Distance(TargetPosition);
-								double VertexDistance = CompareLocation.Distance(TargetPosition) * AngleAdjustment;
-								//VertexDistance = VertexDistance * VertexDistance* VertexDistance* VertexDistance* VertexDistance* VertexDistance* VertexDistance* VertexDistance;
-								/*if (DotProduct > 0.0)
-								{
-									VertexDistance = VertexDistance * DotProduct;
-								}*/
-
-								//double AdditionalWeightCount = FurthestDistance / VertexDistance;
-								//double AdditionalWeight = AdditionalWeightCount * ClusterWeights[Vertex];
-								double AdditionalWeightCount = 1 / VertexDistance;
-								double AdditionalWeight = ClusterWeights[Vertex] / VertexDistance;
-
-								WeightsOut += AdditionalWeight;
-								DistancesOut += AdditionalWeightCount;
-						  }
-
-						  if (Depth > 1)
-						  {
-								GetWeights(SceneNode, VertexPolygons, ClusterWeights, TargetMatrix, Vertex, TouchedPolygons, TouchedVertices, WeightsOut, DistancesOut, Depth - 1);
-						  }
-					 }
-				}
-		  }
-
-		  static void FindVertexNeedingWeight(int SearchFromVertex, FbxNode* SceneNode, TArray<int>& NeedWeights, TMap<int, TArray<int>>& VertexPolygons, TArray<int>& NoWeights, int32 Depth)
-		  {
-				for (int PolygonIndex : VertexPolygons[SearchFromVertex])
-				{
-					 for (int VertexIndex = 0; VertexIndex < SceneNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
-					 {
-						  int Vertex = SceneNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
-						  if (NoWeights.Contains(Vertex))
-						  {
-								NeedWeights.AddUnique(Vertex);
-						  }
-
-						  if (Depth > 1)
-						  {
-								FindVertexNeedingWeight(Vertex, SceneNode, NeedWeights, VertexPolygons, NoWeights, Depth - 1);
-						  }
-					 }
-				}
-		  }
-	 };
 
 	 // Detach geometry from the skeleton
 	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
@@ -732,182 +667,24 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 RootNode->AddChild(SceneNode);
 				}
 		  }
-#if 1
-		  if (SubdivisionLevels.Num() > 0)
+
+		  // Fix Subdivision Weights
+		  FString GeometryName = UTF8_TO_TCHAR(SceneNode->GetName());
+		  if (BaseScene && SubdivisionLevels.Contains(GeometryName) && SubdivisionLevels[GeometryName] > 0 && SceneNode->GetMesh())
 		  {
-				// Create missing weights
-				if (NodeGeometry)
-				{
-					 FString GeometryName = UTF8_TO_TCHAR(SceneNode->GetName());
-					 if (!SubdivisionLevels.Contains(GeometryName)) continue;
-					 if (SubdivisionLevels[GeometryName] == 0) continue;
+			  // Find a mesh from the BaseScene to match this mesh
+			  for (int BaseNodeIndex = 0; BaseNodeIndex < BaseScene->GetNodeCount(); ++BaseNodeIndex)
+			  {
+				  FbxNode* BaseSceneNode = BaseScene->GetNode(NodeIndex);
+				  if (BaseSceneNode && BaseSceneNode->GetMesh() && UTF8_TO_TCHAR(BaseSceneNode->GetName()) == GeometryName)
+				  {
+					  int32 SubdivisionLevel = SubdivisionLevels[GeometryName];
+					  FDazToUnrealSubdivision::SubdivideMesh(BaseSceneNode, SceneNode, SubdivisionLevel);
+					  break;
+				  }
+			  }
 
-					 for (int DeformerIndex = 0; DeformerIndex < NodeGeometry->GetDeformerCount(); ++DeformerIndex)
-					 {
-						  FbxSkin* Skin = static_cast<FbxSkin*>(NodeGeometry->GetDeformer(DeformerIndex));
-						  if (Skin)
-						  {
-
-								FbxVector4* VertexLocations = SceneNode->GetMesh()->GetControlPoints();
-								TArray<int> NoWeights;
-								TArray<int> HasWeights;
-								TMap<int, TArray<int>> VertexPolygons;
-								TMap<int, FbxVector4> VertexNormals;
-								// iterate the polygons
-								for (int PolygonIndex = 0; PolygonIndex < SceneNode->GetMesh()->GetPolygonCount(); ++PolygonIndex)
-								{
-
-									 for (int VertexIndex = 0; VertexIndex < SceneNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
-									 {
-										  int Vertex = SceneNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
-										  if (!VertexPolygons.Contains(Vertex))
-										  {
-												TArray<int> PolygonList;
-												VertexPolygons.Add(Vertex, PolygonList);
-										  }
-										  VertexPolygons[Vertex].Add(PolygonIndex);
-										  if (HasWeights.Contains(Vertex)) continue;
-										  if (NoWeights.Contains(Vertex)) continue;
-
-										  FbxVector4 VertexNormal;
-										  Vertex, SceneNode->GetMesh()->GetPolygonVertexNormal(PolygonIndex, VertexIndex, VertexNormal);
-										  VertexNormals.Add(Vertex, VertexNormal);
-
-										  NoWeights.AddUnique(Vertex);
-									 }
-								}
-
-								for (int ClusterIndex = 0; ClusterIndex < Skin->GetClusterCount(); ++ClusterIndex)
-								{
-									 FbxCluster* Cluster = Skin->GetCluster(ClusterIndex);
-
-									 for (int ClusterVertexIndex = 0; ClusterVertexIndex < Cluster->GetControlPointIndicesCount(); ++ClusterVertexIndex)
-									 {
-										  int Vertex = Cluster->GetControlPointIndices()[ClusterVertexIndex];
-										  //if (Cluster->GetControlPointIndices()[ClusterVertexIndex] == Vertex)
-										  {
-												NoWeights.Remove(Vertex);
-												HasWeights.AddUnique(Vertex);
-										  }
-									 }
-
-								}
-
-								if (HasWeights.Num() > 0 && NoWeights.Num() > 0)
-								{
-									 //for (int NoWeightVertex : NoWeights)
-									 {
-										  FScopedSlowTask SubdivisionTask(Skin->GetClusterCount(), LOCTEXT("DazToUnrealSudAutoWeightTask", "Creating Subdivision Weights for Cluster:"));
-
-										  for (int ClusterIndex = 0; ClusterIndex < Skin->GetClusterCount(); ++ClusterIndex)
-										  {
-												SubdivisionTask.EnterProgressFrame();
-												FbxCluster* Cluster = Skin->GetCluster(ClusterIndex);
-												int ClusterVertexCount = Cluster->GetControlPointIndicesCount();
-
-												//Make a map of all the weights for the cluster
-												TMap<int, double> ClusterWeights;
-												//TMap<int, double> ClusterVertex;
-												for (int ClusterVertexIndex = 0; ClusterVertexIndex < ClusterVertexCount; ++ClusterVertexIndex)
-												{
-													 int WeightVertex = Cluster->GetControlPointIndices()[ClusterVertexIndex];
-													 double Weight = Cluster->GetControlPointWeights()[ClusterVertexIndex];
-													 ClusterWeights.Add(WeightVertex, Weight);
-													 //ClusterVertex.Add(ClusterVertexIndex, WeightVertex);
-												}
-
-												TMap<int, double> WeightsToAdd;
-												for (int ClusterVertexIndex = 0; ClusterVertexIndex < ClusterVertexCount; ++ClusterVertexIndex)
-												{
-													 int WeightVertex = Cluster->GetControlPointIndices()[ClusterVertexIndex];
-													 //if(NoWeights.Contains(NoWeightVertex))
-													 {
-														  TArray<int> NeedWeights;
-														  local::FindVertexNeedingWeight(WeightVertex, SceneNode, NeedWeights, VertexPolygons, NoWeights, 1);
-														  /*for (int PolygonIndex : VertexPolygons[WeightVertex])
-														  {
-															  for (int VertexIndex = 0; VertexIndex < SceneNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
-															  {
-																  int Vertex = SceneNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
-																  if (NoWeights.Contains(Vertex))
-																  {
-																	  NeedWeights.AddUnique(Vertex);
-																  }
-															  }
-														  }*/
-
-														  for (int NeedWeightVertex : NeedWeights)
-														  {
-																double WeightCount = 0.0f;
-																double Weight = 0.0f;
-
-																FbxVector4 NeedWeightVertexLocation = VertexLocations[NeedWeightVertex];
-																TArray<int> TouchedPolygons;
-																TArray<int> TouchedVertices;
-																FbxVector4 ScaleVector = FbxVector4(1.0, 1.0, 1.0);
-																FbxMatrix VertexMatrix = FbxMatrix(NeedWeightVertexLocation, VertexNormals[NeedWeightVertex], ScaleVector);
-																local::GetWeights(SceneNode, VertexPolygons, ClusterWeights, VertexMatrix, NeedWeightVertex, TouchedPolygons, TouchedVertices, Weight, WeightCount, 1);
-
-
-
-																/*for (int PolygonIndex : VertexPolygons[NeedWeightVertex])
-																{
-																	FbxVector4 NeedWeightVertexNormal;
-																	for (int VertexIndex = 0; VertexIndex < SceneNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
-																	{
-																		int Vertex = SceneNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
-																		if (Vertex == NeedWeightVertex)
-																		{
-																			SceneNode->GetMesh()->GetPolygonVertexNormal(PolygonIndex, VertexIndex, NeedWeightVertexNormal);
-																		}
-																	}
-																	// Set the vertices with no weight, to be the average of the ones with weight.
-																	for (int VertexIndex = 0; VertexIndex < SceneNode->GetMesh()->GetPolygonSize(PolygonIndex); ++VertexIndex)
-																	{
-																		int Vertex = SceneNode->GetMesh()->GetPolygonVertex(PolygonIndex, VertexIndex);
-																		if (ClusterWeights.Contains(Vertex))
-																		{
-																			FbxVector4 CompareVertexNormal;
-																			SceneNode->GetMesh()->GetPolygonVertexNormal(PolygonIndex, VertexIndex, CompareVertexNormal);
-																			double DotProduct = CompareVertexNormal.DotProduct(NeedWeightVertexNormal);
-																			FbxVector4 CompareLocation = VertexLocations[Vertex];
-																			double VertexDistance = NeedWeightVertexLocation.Distance(CompareLocation);
-																			if (DotProduct > 0.0)
-																			{
-																				VertexDistance = VertexDistance * DotProduct;
-																			}
-
-																			//double AdditionalWeightCount = FurthestDistance / VertexDistance;
-																			//double AdditionalWeight = AdditionalWeightCount * ClusterWeights[Vertex];
-																			double AdditionalWeightCount = 1 / VertexDistance;
-																			double AdditionalWeight = ClusterWeights[Vertex] /  VertexDistance;
-
-																			Weight += AdditionalWeight;
-																			WeightCount += AdditionalWeightCount;
-																		}
-																	}
-																}*/
-																if (WeightCount > 0)
-																{
-																	 WeightsToAdd.Add(NeedWeightVertex, Weight / (double)WeightCount);
-																	 //Cluster->AddControlPointIndex(NeedWeightVertex, Weight / (double)WeightCount);
-																}
-														  }
-													 }
-												}
-
-												for (auto WeightToAdd : WeightsToAdd)
-												{
-													 Cluster->AddControlPointIndex(WeightToAdd.Key, WeightToAdd.Value);
-												}
-										  }
-									 }
-								}
-						  }
-					 }
-				}
 		  }
-#endif
 	 }
 
 	 // Add IK bones
@@ -1103,10 +880,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 									 ChannelsToRemove.AddUnique(Channel);
 								}
 						  }
-					 }
-					 for (FbxBlendShapeChannel* Channel : ChannelsToRemove)
-					 {
-						  BlendShape->RemoveBlendShapeChannel(Channel);
 					 }
 				}
 		  }
@@ -1330,7 +1103,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 }
 
 	 // Import FBX
-	 UObject* NewObject = ImportFBXAsset(UpdatedFBXFile, CharacterFolder, AssetType, CharacterType, CharacterTypeName);
+	 bool bSetPostProcessAnimation = !FDazToUnrealMorphs::IsAutoJCMImport(JsonObject);
+	 UObject* NewObject = ImportFBXAsset(UpdatedFBXFile, CharacterFolder, AssetType, CharacterType, CharacterTypeName, bSetPostProcessAnimation);
 
 	 // If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
 	 if (AssetType == DazAssetType::Pose)
@@ -1344,6 +1118,29 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 			 AssetsToSelect.Add((UObject*)NewPoseAsset);
 			 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
 		 }
+	 }
+
+	 // Create and attach the Joint Control Anim
+	 if (AssetType == DazAssetType::SkeletalMesh)
+	 {
+		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
+		 {
+#if ENGINE_MAJOR_VERSION > 4
+			 USkeleton* Skeleton = SkeletalMesh->GetSkeleton();
+#else
+			 USkeleton* Skeleton = SkeletalMesh->Skeleton;
+#endif
+			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, Skeleton, SkeletalMesh))
+			 {
+				 //JointControlAnim->CurrentSkeleton = SkeletalMesh->Skeleton;
+#if ENGINE_MAJOR_VERSION > 4
+				 SkeletalMesh->SetPostProcessAnimBlueprint(JointControlAnim->GetClass());
+#else
+				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();
+#endif			 
+			 }
+		 }
+		 
 	 }
 
 	 return NewObject;
@@ -1441,7 +1238,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 	 return false;
 }
 
-UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName)
+UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName, const bool bSetPostProcessAnimation)
 {
 	 FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 	 UDazToUnrealSettings* CachedSettings = GetMutableDefault<UDazToUnrealSettings>();
@@ -1497,6 +1294,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 {
 		  FbxFactory->ImportUI->bImportAsSkeletal = false;
 		  FbxFactory->ImportUI->bImportMaterials = true;
+		  FbxFactory->ImportUI->StaticMeshImportData->bForceFrontXAxis = false;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_StaticMesh;
 	 }
 	 if (AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose)
@@ -1552,15 +1350,24 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 {
 		  if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(ImportedAsset))
 		  {
-				if (CachedSettings->SkeletonPostProcessAnimation.Contains(SkeletonPath))
+				if (bSetPostProcessAnimation && CachedSettings->SkeletonPostProcessAnimation.Contains(SkeletonPath))
 				{
+#if ENGINE_MAJOR_VERSION > 4
+					SkeletalMesh->SetPostProcessAnimBlueprint(CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>());
+#else
 					SkeletalMesh->PostProcessAnimBlueprint = CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>();
+#endif
 				}
 
 				//Get the new skeleton
 				if (!Skeleton)
 				{
+#if ENGINE_MAJOR_VERSION > 4
+					Skeleton = SkeletalMesh->GetSkeleton();
+#else
 					 Skeleton = SkeletalMesh->Skeleton;
+#endif
+
 					 int32 BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("pelvis")));
 					 if (BoneIndex == -1)
 					 {
